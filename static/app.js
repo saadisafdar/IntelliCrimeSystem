@@ -8,14 +8,56 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
+const sectionMeta = {
+    dashboard: { title: "🏠 Dashboard" },
+    firs: { title: "📄 FIRs" },
+    criminals: { title: "👤 Criminals" },
+    cases: { title: "📁 Cases" },
+    evidence: { title: "🔍 Evidence" },
+    vehicles: { title: "🚗 Vehicles" },
+    mobiles: { title: "📱 Mobile Numbers" },
+    alerts: { title: "🚨 Alerts" },
+    reports: { title: "📊 Reports" },
+    admin: { title: "⚙️ Administration" },
+};
+
+const metricIcons = {
+    "Total FIRs": "📄",
+    "Active Cases": "📁",
+    Criminals: "👤",
+    Evidence: "🔍",
+    "New Alerts": "🚨",
+};
+
+const statusIcons = {
+    ACTIVE: "✅",
+    VERIFIED: "✅",
+    SOLVED: "✅",
+    RESOLVED: "✅",
+    CLEARED: "✅",
+    CLOSED: "✅",
+    PENDING: "⏳",
+    OPEN: "⏳",
+    REGISTERED: "⏳",
+    UNDER_INVESTIGATION: "🔍",
+    REVIEWED: "🔎",
+    NEW: "🚨",
+    HIGH: "⚠️",
+    CRITICAL: "⚠️",
+    WANTED: "⚠️",
+    REJECTED: "⚠️",
+    ARCHIVED: "🗄️",
+    DISMISSED: "🗑️",
+};
+
 function showLoading(show) {
     $("#loading").classList.toggle("hidden", !show);
 }
 
 function toast(message, type = "ok") {
     const node = document.createElement("div");
-    node.className = `toast ${type === "error" ? "error" : ""}`;
-    node.textContent = message;
+    node.className = `toast ${type === "error" ? "error" : "success"}`;
+    node.textContent = `${type === "error" ? "⚠️" : "✅"} ${message}`;
     $("#toastHost").appendChild(node);
     setTimeout(() => node.remove(), 3800);
 }
@@ -51,12 +93,14 @@ function escapeHtml(value) {
 }
 
 function badge(value) {
-    return `<span class="badge ${escapeHtml(value)}">${escapeHtml(value)}</span>`;
+    const text = String(value ?? "");
+    const icon = statusIcons[text] || "";
+    return `<span class="badge ${escapeHtml(text)}">${icon ? `${icon} ` : ""}${escapeHtml(text)}</span>`;
 }
 
 function renderTable(target, rows, columns, actions) {
     if (!rows || rows.length === 0) {
-        $(target).innerHTML = `<div class="empty">No records found.</div>`;
+        $(target).innerHTML = `<div class="empty">🔎 No records found.</div>`;
         return;
     }
     const head = columns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("") + (actions ? "<th>Actions</th>" : "");
@@ -96,6 +140,8 @@ function openModal(title, fields, submit) {
     $("#modalFields").innerHTML = fields.map(fieldHtml).join("");
     state.modalAction = submit;
     $("#modal").classList.remove("hidden");
+    const firstField = $("#modalFields input, #modalFields select, #modalFields textarea");
+    if (firstField) firstField.focus();
 }
 
 function closeModal() {
@@ -109,7 +155,11 @@ function confirmAction(text, action) {
     $("#confirmModal").classList.remove("hidden");
     $("#okConfirm").onclick = async () => {
         $("#confirmModal").classList.add("hidden");
-        await action();
+        try {
+            await action();
+        } catch (err) {
+            toast(err.message, "error");
+        }
     };
 }
 
@@ -135,7 +185,13 @@ async function loadDashboard() {
         ["Evidence", data.totals.evidence],
         ["New Alerts", data.totals.new_alerts],
     ];
-    $("#dashboardCards").innerHTML = labels.map(([label, value]) => `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`).join("");
+    $("#dashboardCards").innerHTML = labels.map(([label, value]) => `
+        <div class="metric">
+            <div class="metric-icon">${metricIcons[label] || "📊"}</div>
+            <span>${label}</span>
+            <strong>${value}</strong>
+        </div>
+    `).join("");
     renderTable("#recentFirs", data.recent_firs, [
         { key: "fir_no", label: "FIR" },
         { key: "reported_by", label: "Reporter" },
@@ -169,7 +225,7 @@ async function loadFirs() {
         { key: "crime_type_name", label: "Crime" },
         { key: "area_name", label: "Location" },
         { key: "fir_status", label: "Status", render: (r) => badge(r.fir_status) },
-    ], (r) => `<button class="mini" onclick="editFir(${r.fir_id})">Edit</button><button class="mini danger" onclick="archiveFir(${r.fir_id})">Archive</button>`);
+    ], (r) => `<button class="mini" onclick="editFir(${r.fir_id})">✏️ Edit</button><button class="mini danger" onclick="archiveFir(${r.fir_id})">🗑️ Archive</button>`);
 }
 
 async function loadCriminals() {
@@ -182,7 +238,7 @@ async function loadCriminals() {
         { key: "phone", label: "Phone" },
         { key: "criminal_status", label: "Status", render: (r) => badge(r.criminal_status) },
         { key: "linked_case_count", label: "Cases" },
-    ], (r) => `<button class="mini" onclick="editCriminal(${r.criminal_id})">Edit</button><button class="mini danger" onclick="clearCriminal(${r.criminal_id})">Clear</button>`);
+    ], (r) => `<button class="mini" onclick="editCriminal(${r.criminal_id})">✏️ Edit</button><button class="mini danger" onclick="clearCriminal(${r.criminal_id})">✅ Clear</button>`);
 }
 
 async function loadCases() {
@@ -196,7 +252,7 @@ async function loadCases() {
         { key: "officer_name", label: "Officer" },
         { key: "priority", label: "Priority", render: (r) => badge(r.priority) },
         { key: "case_status", label: "Status", render: (r) => badge(r.case_status) },
-    ], (r) => `<button class="mini" onclick="loadCaseDetail(${r.case_id})">Details</button><button class="mini" onclick="openCaseStatus(${r.case_id})">Status</button><button class="mini danger" onclick="archiveCase(${r.case_id})">Archive</button>`);
+    ], (r) => `<button class="mini" onclick="loadCaseDetail(${r.case_id})">📁 Details</button><button class="mini" onclick="openCaseStatus(${r.case_id})">⏳ Status</button><button class="mini danger" onclick="archiveCase(${r.case_id})">🗑️ Archive</button>`);
 }
 
 async function loadCaseDetail(caseId) {
@@ -207,28 +263,28 @@ async function loadCaseDetail(caseId) {
         <h3>${escapeHtml(c.case_title)} ${badge(c.case_status)}</h3>
         <p>${escapeHtml(c.fir_description || c.case_description)}</p>
         <div class="toolbar">
-            <button class="primary" onclick="openAssignOfficer(${caseId})">Assign Officer</button>
-            <button class="ghost" onclick="openSuspect(${caseId})">Link Suspect</button>
-            <button class="ghost" onclick="openVictim(${caseId})">Add Victim</button>
-            <button class="ghost" onclick="openWitness(${caseId})">Add Witness</button>
-            <button class="ghost" onclick="openCaseEvidence(${caseId})">Add Evidence</button>
-            <button class="ghost" onclick="openCaseLog(${caseId})">Add Log</button>
+            <button class="primary" onclick="openAssignOfficer(${caseId})">👮 Assign Officer</button>
+            <button class="ghost" onclick="openSuspect(${caseId})">👤 Link Suspect</button>
+            <button class="ghost" onclick="openVictim(${caseId})">➕ Add Victim</button>
+            <button class="ghost" onclick="openWitness(${caseId})">➕ Add Witness</button>
+            <button class="ghost" onclick="openCaseEvidence(${caseId})">🔍 Add Evidence</button>
+            <button class="ghost" onclick="openCaseLog(${caseId})">📝 Add Log</button>
         </div>
         <div class="detail-grid">
-            ${detailList("Suspects", data.suspects, ["criminal_name", "suspect_role", "involvement_status"])}
-            ${detailList("Victims", data.victims, ["victim_name", "phone", "injury_details"])}
-            ${detailList("Witnesses", data.witnesses, ["witness_name", "phone", "statement_summary"])}
-            ${detailList("Evidence", data.evidence, ["evidence_code", "evidence_type", "verification_status"])}
-            ${detailList("Vehicles", data.vehicles, ["vehicle_number", "relation_to_case", "suspicious_status"])}
-            ${detailList("Mobile Numbers", data.mobiles, ["mobile_number", "relation_to_case", "suspicious_status"])}
-            ${detailList("Investigation Logs", data.logs, ["officer_name", "progress_note", "next_action"])}
-            ${detailList("Status History", data.history, ["old_status", "new_status", "remarks"])}
+            ${detailList("👤 Suspects", data.suspects, ["criminal_name", "suspect_role", "involvement_status"])}
+            ${detailList("🧾 Victims", data.victims, ["victim_name", "phone", "injury_details"])}
+            ${detailList("👁️ Witnesses", data.witnesses, ["witness_name", "phone", "statement_summary"])}
+            ${detailList("🔍 Evidence", data.evidence, ["evidence_code", "evidence_type", "verification_status"])}
+            ${detailList("🚗 Vehicles", data.vehicles, ["vehicle_number", "relation_to_case", "suspicious_status"])}
+            ${detailList("📱 Mobile Numbers", data.mobiles, ["mobile_number", "relation_to_case", "suspicious_status"])}
+            ${detailList("📝 Investigation Logs", data.logs, ["officer_name", "progress_note", "next_action"])}
+            ${detailList("⏳ Status History", data.history, ["old_status", "new_status", "remarks"])}
         </div>
     `;
 }
 
 function detailList(title, rows, keys) {
-    const content = rows.length ? rows.map((row) => `<li>${keys.map((key) => escapeHtml(row[key])).filter(Boolean).join(" · ")}</li>`).join("") : "<li>No records.</li>";
+    const content = rows.length ? rows.map((row) => `<li>${keys.map((key) => escapeHtml(row[key])).filter(Boolean).join(" · ")}</li>`).join("") : "<li>🔎 No records.</li>";
     return `<div class="detail-card"><h3>${title}</h3><ul>${content}</ul></div>`;
 }
 
@@ -242,7 +298,7 @@ async function loadEvidence() {
         { key: "evidence_type", label: "Type" },
         { key: "storage_location", label: "Storage" },
         { key: "verification_status", label: "Status", render: (r) => badge(r.verification_status) },
-    ], (r) => `<button class="mini" onclick="verifyEvidence(${r.evidence_id}, 'VERIFIED')">Verify</button><button class="mini danger" onclick="archiveEvidence(${r.evidence_id})">Archive</button>`);
+    ], (r) => `<button class="mini" onclick="verifyEvidence(${r.evidence_id}, 'VERIFIED')">✅ Verify</button><button class="mini danger" onclick="archiveEvidence(${r.evidence_id})">🗑️ Archive</button>`);
 }
 
 async function loadVehicles() {
@@ -255,7 +311,7 @@ async function loadVehicles() {
         { key: "model", label: "Model" },
         { key: "linked_case_count", label: "Cases" },
         { key: "suspicious_status", label: "Status", render: (r) => badge(r.suspicious_status) },
-    ], (r) => `<button class="mini" onclick="openVehicleLink(${r.vehicle_id})">Link</button>`);
+    ], (r) => `<button class="mini" onclick="openVehicleLink(${r.vehicle_id})">🔗 Link</button>`);
 }
 
 async function loadMobiles() {
@@ -268,7 +324,7 @@ async function loadMobiles() {
         { key: "registered_cnic", label: "CNIC" },
         { key: "linked_case_count", label: "Cases" },
         { key: "suspicious_status", label: "Status", render: (r) => badge(r.suspicious_status) },
-    ], (r) => `<button class="mini" onclick="openMobileLink(${r.mobile_id})">Link</button>`);
+    ], (r) => `<button class="mini" onclick="openMobileLink(${r.mobile_id})">🔗 Link</button>`);
 }
 
 async function loadAlerts() {
@@ -279,21 +335,21 @@ async function loadAlerts() {
         { key: "alert_message", label: "Message" },
         { key: "case_title", label: "Case" },
         { key: "alert_status", label: "Status", render: (r) => badge(r.alert_status) },
-    ], (r) => `<button class="mini" onclick="alertAction(${r.alert_id}, 'review')">Review</button><button class="mini" onclick="alertAction(${r.alert_id}, 'resolve')">Resolve</button><button class="mini danger" onclick="alertAction(${r.alert_id}, 'dismiss')">Dismiss</button>`);
+    ], (r) => `<button class="mini" onclick="alertAction(${r.alert_id}, 'review')">🔎 Review</button><button class="mini" onclick="alertAction(${r.alert_id}, 'resolve')">✅ Resolve</button><button class="mini danger" onclick="alertAction(${r.alert_id}, 'dismiss')">🗑️ Dismiss</button>`);
 }
 
 async function loadReports() {
     const data = await api("/api/reports");
     $("#reportsGrid").innerHTML = Object.entries(data.reports).map(([name, rows]) => `
         <article class="panel">
-            <h3>${name.replaceAll("_", " ")}</h3>
+            <h3>📊 ${name.replaceAll("_", " ")}</h3>
             <div>${reportPreview(rows)}</div>
         </article>
     `).join("");
 }
 
 function reportPreview(rows) {
-    if (!rows || rows.length === 0) return `<div class="empty">No report rows.</div>`;
+    if (!rows || rows.length === 0) return `<div class="empty">🔎 No report rows.</div>`;
     const keys = Object.keys(rows[0]).slice(0, 4);
     return `<table><thead><tr>${keys.map((key) => `<th>${key}</th>`).join("")}</tr></thead><tbody>${rows.slice(0, 6).map((row) => `<tr>${keys.map((key) => `<td>${escapeHtml(row[key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
@@ -301,14 +357,14 @@ function reportPreview(rows) {
 async function loadAdmin() {
     const data = await api("/api/admin");
     $("#adminPanel").innerHTML = `
-        <article class="panel"><h3>Users</h3>${smallTable(data.users, ["username", "full_name", "role_name", "status"])}</article>
-        <article class="panel"><h3>Stations</h3>${smallTable(data.stations, ["station_name", "city", "status"])}</article>
-        <article class="panel"><h3>Recent Audit Logs</h3>${smallTable(data.audit_logs, ["table_name", "record_id", "operation_type", "changed_at"])}</article>
+        <article class="panel"><h3>👥 Users</h3>${smallTable(data.users, ["username", "full_name", "role_name", "status"])}</article>
+        <article class="panel"><h3>🏢 Stations</h3>${smallTable(data.stations, ["station_name", "city", "status"])}</article>
+        <article class="panel"><h3>🧾 Recent Audit Logs</h3>${smallTable(data.audit_logs, ["table_name", "record_id", "operation_type", "changed_at"])}</article>
     `;
 }
 
 function smallTable(rows, keys) {
-    if (!rows || rows.length === 0) return `<div class="empty">No records.</div>`;
+    if (!rows || rows.length === 0) return `<div class="empty">🔎 No records.</div>`;
     return `<table><thead><tr>${keys.map((key) => `<th>${key}</th>`).join("")}</tr></thead><tbody>${rows.slice(0, 10).map((row) => `<tr>${keys.map((key) => `<td>${escapeHtml(row[key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
@@ -329,13 +385,13 @@ async function showSection(name) {
     state.currentSection = name;
     $$(".section").forEach((section) => section.classList.toggle("active", section.id === name));
     $$(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.section === name));
-    $("#sectionTitle").textContent = name === "firs" ? "FIRs" : name.replace(/\b\w/g, (c) => c.toUpperCase());
+    $("#sectionTitle").textContent = sectionMeta[name]?.title || name.replace(/\b\w/g, (c) => c.toUpperCase());
     $("#sidebar").classList.remove("open");
     await sectionLoaders[name]();
 }
 
 function openFirForm() {
-    openModal("Register FIR", [
+    openModal("📄 Register FIR", [
         { name: "fir_no", label: "FIR Number", required: true },
         { name: "station_id", label: "Station", type: "select", required: true, options: optionList(state.lookups.stations, "station_id", "station_name") },
         { name: "crime_type_id", label: "Crime Type", type: "select", required: true, options: optionList(state.lookups.crime_types, "crime_type_id", "crime_type_name") },
@@ -355,7 +411,7 @@ function openFirForm() {
 }
 
 function openCriminalForm() {
-    openModal("Add Criminal", [
+    openModal("👤 Add Criminal", [
         { name: "criminal_name", label: "Name", required: true },
         { name: "cnic", label: "CNIC" },
         { name: "gender", label: "Gender" },
@@ -374,7 +430,7 @@ function openCriminalForm() {
 }
 
 function openEvidenceForm(caseId = "") {
-    openModal("Add Evidence", [
+    openModal("🔍 Add Evidence", [
         { name: "case_id", label: "Case", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title", caseId) },
         { name: "evidence_code", label: "Evidence Code", required: true },
         { name: "evidence_type", label: "Evidence Type", required: true },
@@ -391,7 +447,7 @@ function openEvidenceForm(caseId = "") {
 }
 
 function openVehicleForm() {
-    openModal("Add Vehicle", [
+    openModal("🚗 Add Vehicle", [
         { name: "vehicle_number", label: "Registration Number", required: true },
         { name: "owner_name", label: "Owner" },
         { name: "owner_cnic", label: "Owner CNIC" },
@@ -408,7 +464,7 @@ function openVehicleForm() {
 }
 
 function openMobileForm() {
-    openModal("Add Mobile Number", [
+    openModal("📱 Add Mobile Number", [
         { name: "mobile_number", label: "Mobile Number", required: true },
         { name: "owner_name", label: "Owner" },
         { name: "network", label: "Network" },
@@ -422,7 +478,7 @@ function openMobileForm() {
 }
 
 function openAssignOfficer(caseId) {
-    openModal("Assign Officer", [
+    openModal("👮 Assign Officer", [
         { name: "officer_id", label: "Officer", type: "select", required: true, options: optionList(state.lookups.officers, "officer_id", "officer_name") },
     ], async (data) => {
         await api(`/api/cases/${caseId}/assign-officer`, { method: "POST", body: data });
@@ -434,7 +490,7 @@ function openAssignOfficer(caseId) {
 }
 
 function openCaseStatus(caseId) {
-    openModal("Update Case Status", [
+    openModal("⏳ Update Case Status", [
         { name: "case_status", label: "Status", type: "select", required: true, options: ["OPEN", "UNDER_INVESTIGATION", "PENDING", "SOLVED", "CLOSED", "ARCHIVED"].map((s) => `<option>${s}</option>`).join("") },
         { name: "remarks", label: "Remarks", type: "textarea" },
     ], async (data) => {
@@ -446,7 +502,7 @@ function openCaseStatus(caseId) {
 }
 
 function openSuspect(caseId) {
-    openModal("Link Suspect", [
+    openModal("👤 Link Suspect", [
         { name: "criminal_id", label: "Criminal", type: "select", required: true, options: optionList(state.lookups.criminals, "criminal_id", "criminal_name") },
         { name: "suspect_role", label: "Role" },
         { name: "involvement_status", label: "Involvement Status" },
@@ -459,7 +515,7 @@ function openSuspect(caseId) {
 }
 
 function openVictim(caseId) {
-    openModal("Add Victim", [
+    openModal("🧾 Add Victim", [
         { name: "victim_name", label: "Name", required: true },
         { name: "cnic", label: "CNIC" },
         { name: "gender", label: "Gender" },
@@ -475,7 +531,7 @@ function openVictim(caseId) {
 }
 
 function openWitness(caseId) {
-    openModal("Add Witness", [
+    openModal("👁️ Add Witness", [
         { name: "witness_name", label: "Name", required: true },
         { name: "cnic", label: "CNIC" },
         { name: "phone", label: "Phone" },
@@ -489,7 +545,7 @@ function openWitness(caseId) {
 }
 
 function openCaseLog(caseId) {
-    openModal("Add Investigation Log", [
+    openModal("📝 Add Investigation Log", [
         { name: "officer_id", label: "Officer", type: "select", options: optionList(state.lookups.officers, "officer_id", "officer_name") },
         { name: "progress_note", label: "Progress Note", type: "textarea", required: true },
         { name: "next_action", label: "Next Action", type: "textarea" },
@@ -506,7 +562,7 @@ function openCaseEvidence(caseId) {
 }
 
 function openVehicleLink(vehicleId) {
-    openModal("Link Vehicle to Case", [
+    openModal("🚗 Link Vehicle to Case", [
         { name: "case_id", label: "Case", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title") },
         { name: "detected_location", label: "Detected Location" },
         { name: "relation_to_case", label: "Relation" },
@@ -520,7 +576,7 @@ function openVehicleLink(vehicleId) {
 }
 
 function openMobileLink(mobileId) {
-    openModal("Link Mobile to Case", [
+    openModal("📱 Link Mobile to Case", [
         { name: "case_id", label: "Case", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title") },
         { name: "linked_person", label: "Linked Person" },
         { name: "relation_to_case", label: "Relation" },
@@ -534,7 +590,7 @@ function openMobileLink(mobileId) {
 }
 
 async function editFir(id) {
-    openModal("Update FIR", [
+    openModal("✏️ Update FIR", [
         { name: "reported_by", label: "Reported By" },
         { name: "reporter_phone", label: "Reporter Phone" },
         { name: "fir_status", label: "Status", type: "select", options: ["REGISTERED", "VERIFIED", "REJECTED", "ARCHIVED"].map((s) => `<option>${s}</option>`).join("") },
@@ -548,7 +604,7 @@ async function editFir(id) {
 }
 
 function editCriminal(id) {
-    openModal("Update Criminal", [
+    openModal("✏️ Update Criminal", [
         { name: "criminal_name", label: "Name" },
         { name: "phone", label: "Phone" },
         { name: "criminal_status", label: "Status", type: "select", options: ["SUSPECT", "WANTED", "ARRESTED", "CONVICTED", "RELEASED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },

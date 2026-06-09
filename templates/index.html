@@ -8,17 +8,20 @@
 </head>
 <body>
     <div id="toastHost" class="toast-host"></div>
-    <div id="loading" class="loading hidden"><span></span></div>
+    <div id="loading" class="loading hidden"><span></span><strong>Loading</strong></div>
 
     <main id="loginView" class="login-view">
         <section class="login-panel">
-            <div class="brand-mark">IC</div>
-            <h1>IntelliCrime System</h1>
-            <p>Smart crime investigation and criminal record management</p>
+            <div class="login-header">
+                <div class="brand-mark">IC</div>
+                <span class="eyebrow">🔐 Secure access</span>
+                <h1>IntelliCrime System</h1>
+                <p>Smart crime investigation and criminal record management</p>
+            </div>
             <form id="loginForm" class="form-grid">
                 <label>Username<input name="username" autocomplete="username" required value="admin"></label>
                 <label>Password<input name="password" type="password" autocomplete="current-password" required value="admin123"></label>
-                <button class="primary" type="submit">Login</button>
+                <button class="primary" type="submit">🔐 Login</button>
             </form>
             <div class="demo-logins">
                 <span>admin / admin123</span>
@@ -39,16 +42,16 @@
                 </div>
             </div>
             <nav>
-                <button class="nav-btn active" data-section="dashboard">Dashboard</button>
-                <button class="nav-btn" data-section="firs">FIRs</button>
-                <button class="nav-btn" data-section="criminals">Criminals</button>
-                <button class="nav-btn" data-section="cases">Cases</button>
-                <button class="nav-btn" data-section="evidence">Evidence</button>
-                <button class="nav-btn" data-section="vehicles">Vehicles</button>
-                <button class="nav-btn" data-section="mobiles">Mobile Numbers</button>
-                <button class="nav-btn" data-section="alerts">Alerts</button>
-                <button class="nav-btn" data-section="reports">Reports</button>
-                <button class="nav-btn" data-section="admin">Administration</button>
+                <button class="nav-btn active" data-section="dashboard"><span>🏠</span>Dashboard</button>
+                <button class="nav-btn" data-section="firs"><span>📄</span>FIRs</button>
+                <button class="nav-btn" data-section="criminals"><span>👤</span>Criminals</button>
+                <button class="nav-btn" data-section="cases"><span>📁</span>Cases</button>
+                <button class="nav-btn" data-section="evidence"><span>🔍</span>Evidence</button>
+                <button class="nav-btn" data-section="vehicles"><span>🚗</span>Vehicles</button>
+                <button class="nav-btn" data-section="mobiles"><span>📱</span>Mobile Numbers</button>
+                <button class="nav-btn" data-section="alerts"><span>🚨</span>Alerts</button>
+                <button class="nav-btn" data-section="reports"><span>📊</span>Reports</button>
+                <button class="nav-btn" data-section="admin"><span>⚙️</span>Administration</button>
             </nav>
         </aside>
 
@@ -59,47 +62,47 @@
                     <h2 id="sectionTitle">Dashboard</h2>
                     <span id="userBadge"></span>
                 </div>
-                <button id="logoutBtn" class="ghost" type="button">Logout</button>
+                <button id="logoutBtn" class="ghost" type="button">🚪 Logout</button>
             </header>
 
             <section id="dashboard" class="section active">
                 <div id="dashboardCards" class="metric-grid"></div>
                 <div class="content-grid">
-                    <article class="panel"><h3>Recent FIRs</h3><div id="recentFirs"></div></article>
-                    <article class="panel"><h3>Recent Alerts</h3><div id="recentAlerts"></div></article>
-                    <article class="panel"><h3>Top Crime Locations</h3><div id="topLocations"></div></article>
-                    <article class="panel"><h3>Officer Workload</h3><div id="officerWorkload"></div></article>
+                    <article class="panel"><h3>📄 Recent FIRs</h3><div id="recentFirs"></div></article>
+                    <article class="panel"><h3>🚨 Recent Alerts</h3><div id="recentAlerts"></div></article>
+                    <article class="panel"><h3>⚠️ Top Crime Locations</h3><div id="topLocations"></div></article>
+                    <article class="panel"><h3>👮 Officer Workload</h3><div id="officerWorkload"></div></article>
                 </div>
             </section>
 
             <section id="firs" class="section">
-                <div class="toolbar"><input id="firSearch" placeholder="Search FIR or reporter"><select id="firStatus"><option value="">All statuses</option><option>REGISTERED</option><option>VERIFIED</option><option>REJECTED</option><option>ARCHIVED</option></select><button class="primary" data-open-form="fir">New FIR</button></div>
+                <div class="toolbar"><input id="firSearch" placeholder="🔎 Search FIR or reporter"><select id="firStatus"><option value="">All statuses</option><option>REGISTERED</option><option>VERIFIED</option><option>REJECTED</option><option>ARCHIVED</option></select><button class="primary" data-open-form="fir">➕ New FIR</button></div>
                 <div id="firsTable" class="table-wrap"></div>
             </section>
 
             <section id="criminals" class="section">
-                <div class="toolbar"><input id="criminalSearch" placeholder="Search name, CNIC or phone"><select id="criminalStatus"><option value="">All statuses</option><option>SUSPECT</option><option>WANTED</option><option>ARRESTED</option><option>CONVICTED</option><option>RELEASED</option><option>CLEARED</option></select><button class="primary" data-open-form="criminal">Add Criminal</button></div>
+                <div class="toolbar"><input id="criminalSearch" placeholder="🔎 Search name, CNIC or phone"><select id="criminalStatus"><option value="">All statuses</option><option>SUSPECT</option><option>WANTED</option><option>ARRESTED</option><option>CONVICTED</option><option>RELEASED</option><option>CLEARED</option></select><button class="primary" data-open-form="criminal">➕ Add Criminal</button></div>
                 <div id="criminalsTable" class="table-wrap"></div>
             </section>
 
             <section id="cases" class="section">
-                <div class="toolbar"><input id="caseSearch" placeholder="Search case or FIR"><select id="caseStatus"><option value="">All statuses</option><option>OPEN</option><option>UNDER_INVESTIGATION</option><option>PENDING</option><option>SOLVED</option><option>CLOSED</option><option>ARCHIVED</option></select></div>
+                <div class="toolbar"><input id="caseSearch" placeholder="🔎 Search case or FIR"><select id="caseStatus"><option value="">All statuses</option><option>OPEN</option><option>UNDER_INVESTIGATION</option><option>PENDING</option><option>SOLVED</option><option>CLOSED</option><option>ARCHIVED</option></select></div>
                 <div id="casesTable" class="table-wrap"></div>
                 <article id="caseDetail" class="panel detail-panel hidden"></article>
             </section>
 
             <section id="evidence" class="section">
-                <div class="toolbar"><input id="evidenceSearch" placeholder="Search evidence code"><select id="evidenceStatus"><option value="">All statuses</option><option>PENDING</option><option>VERIFIED</option><option>REJECTED</option><option>ARCHIVED</option></select><button class="primary" data-open-form="evidence">Add Evidence</button></div>
+                <div class="toolbar"><input id="evidenceSearch" placeholder="🔎 Search evidence code"><select id="evidenceStatus"><option value="">All statuses</option><option>PENDING</option><option>VERIFIED</option><option>REJECTED</option><option>ARCHIVED</option></select><button class="primary" data-open-form="evidence">➕ Add Evidence</button></div>
                 <div id="evidenceTable" class="table-wrap"></div>
             </section>
 
             <section id="vehicles" class="section">
-                <div class="toolbar"><input id="vehicleSearch" placeholder="Search number, owner or model"><button class="primary" data-open-form="vehicle">Add Vehicle</button></div>
+                <div class="toolbar"><input id="vehicleSearch" placeholder="🔎 Search number, owner or model"><button class="primary" data-open-form="vehicle">➕ Add Vehicle</button></div>
                 <div id="vehiclesTable" class="table-wrap"></div>
             </section>
 
             <section id="mobiles" class="section">
-                <div class="toolbar"><input id="mobileSearch" placeholder="Search number, owner or CNIC"><button class="primary" data-open-form="mobile">Add Mobile</button></div>
+                <div class="toolbar"><input id="mobileSearch" placeholder="🔎 Search number, owner or CNIC"><button class="primary" data-open-form="mobile">➕ Add Mobile</button></div>
                 <div id="mobilesTable" class="table-wrap"></div>
             </section>
 
@@ -109,7 +112,7 @@
             </section>
 
             <section id="reports" class="section">
-                <div class="toolbar"><button id="loadReports" class="primary">Refresh Reports</button><button id="exportReports" class="ghost">Export CSV</button></div>
+                <div class="toolbar"><button id="loadReports" class="primary">📊 Refresh Reports</button><button id="exportReports" class="ghost">⬇ Export CSV</button></div>
                 <div id="reportsGrid" class="content-grid"></div>
             </section>
 
@@ -123,15 +126,15 @@
         <form id="modalForm" class="modal-box">
             <header><h3 id="modalTitle">Form</h3><button type="button" class="icon-btn" data-close-modal>×</button></header>
             <div id="modalFields" class="form-grid"></div>
-            <footer><button type="button" class="ghost" data-close-modal>Cancel</button><button class="primary" type="submit">Save</button></footer>
+            <footer><button type="button" class="ghost" data-close-modal>Cancel</button><button class="primary" type="submit">✅ Save</button></footer>
         </form>
     </div>
 
     <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true">
         <div class="modal-box compact">
-            <h3>Confirm action</h3>
+            <h3>⚠️ Confirm action</h3>
             <p id="confirmText"></p>
-            <footer><button id="cancelConfirm" class="ghost" type="button">Cancel</button><button id="okConfirm" class="danger" type="button">Confirm</button></footer>
+            <footer><button id="cancelConfirm" class="ghost" type="button">Cancel</button><button id="okConfirm" class="danger" type="button">🗑️ Confirm</button></footer>
         </div>
     </div>
 
