@@ -1,143 +1,1699 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>IntelliCrime System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliCrime - Smart Investigation System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f0a1a;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        /* ===== LOGIN PAGE ===== */
+        .login-page {
+            background: linear-gradient(135deg, #1a0533 0%, #2d1b69 40%, #4a2c8a 70%, #6a4e9e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-page.hidden {
+            display: none;
+        }
+        
+        .app-container {
+            width: 100%;
+            max-width: 1300px;
+            min-height: 600px;
+            background: rgba(255, 255, 255, 0.07);
+            backdrop-filter: blur(18px);
+            border-radius: 40px;
+            padding: 20px 24px; /* Reduced from 30px to maintain medium element density */
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .login-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: stretch;
+            min-height: 500px;
+        }
+        .brand-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 15px 20px; /* Reduced padding from p-8 equivalent */
+        }
+        .brand-panel .badge {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: #a78bfa;
+            text-transform: uppercase;
+            background: rgba(167, 139, 250, 0.15);
+            padding: 6px 16px;
+            border-radius: 100px;
+            display: inline-block;
+            width: fit-content;
+            margin-bottom: 20px;
+            border: 1px solid rgba(167, 139, 250, 0.2);
+        }
+        .brand-panel h1 {
+            font-size: 24px; /* Scaled down from text-4xl equivalent to text-2xl font-bold */
+            font-weight: 800;
+            color: #fff;
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+        .brand-panel h1 span {
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .brand-panel p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 15px; /* Scaled down to prevent text expansion */
+            max-width: 380px;
+            line-height: 1.7;
+        }
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        .feature-tags span {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 6px 18px;
+            border-radius: 100px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .form-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 28px;
+            padding: 20px 24px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .form-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 4px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .form-tabs button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 13px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.25s ease;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .form-tabs button.active {
+            background: rgba(124, 58, 237, 0.4);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.25);
+        }
+        .form-tabs button:hover:not(.active) {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .auth-form.hidden {
+            display: none;
+        }
+        .auth-form label {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .auth-form input, .auth-form select {
+            padding: 14px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.06);
+            color: #fff;
+            font-size: 15px;
+            transition: 0.25s ease;
+        }
+        .auth-form input:focus, .auth-form select:focus {
+            outline: none;
+            border-color: #7c3aed;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.15);
+        }
+        .auth-form input::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+        .auth-form select option {
+            background: #2d1b69;
+        }
+        .auth-form .btn-primary {
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.25s ease;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff;
+            margin-top: 8px;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+        }
+        .auth-form .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(124, 58, 237, 0.4);
+        }
+        .error-msg {
+            color: #f87171;
+            font-size: 14px;
+            background: rgba(248, 113, 113, 0.1);
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(248, 113, 113, 0.15);
+            display: none;
+        }
+        .error-msg.show {
+            display: block;
+        }
+        .success-msg {
+            color: #6ee7b7;
+            font-size: 14px;
+            background: rgba(110, 231, 183, 0.1);
+            padding: 10px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(110, 231, 183, 0.15);
+            display: none;
+        }
+        .success-msg.show {
+            display: block;
+        }
+        
+        /* ===== DASHBOARD ===== */
+        .dashboard {
+            display: none;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a0533 0%, #2d1b69 40%, #4a2c8a 70%, #6a4e9e 100%);
+            padding: 15px; /* Reduced from p-8 equivalent padding layouts */
+        }
+        .dashboard.active {
+            display: block;
+        }
+        
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px; /* Reduced scale padding */
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .dash-header .logo {
+            font-size: 20px; /* Kept clean and medium */
+            font-weight: 700;
+            background: linear-gradient(135deg, #a78bfa, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .dash-header .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .dash-header .user-info span {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .dash-header .user-info .role-badge {
+            background: rgba(124, 58, 237, 0.3);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #a78bfa;
+            border: 1px solid rgba(167, 139, 250, 0.2);
+        }
+        .btn-logout {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            border: 1px solid rgba(248, 113, 113, 0.15);
+        }
+        .btn-logout:hover {
+            background: rgba(248, 113, 113, 0.3);
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 8px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .nav-menu button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+        .nav-menu button:hover {
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .nav-menu button.active {
+            background: rgba(124, 58, 237, 0.3);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
+        }
+        
+        .content-area {
+            display: none;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            min-height: 400px;
+        }
+        .content-area.active {
+            display: block;
+        }
+        .content-area h2 {
+            color: #fff;
+            font-size: 20px; /* Scaled to text-xl font-semibold equivalent */
+            margin-bottom: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 14px;
+            padding: 14px 18px; /* Compact padding sizing */
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .stat-card .number {
+            font-size: 26px; /* Optimized sizing layout */
+            font-weight: 800;
+            color: #a78bfa;
+        }
+        .stat-card .label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+        
+        .dash-sections {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .dash-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 14px;
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .dash-section h3 {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 15px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        .dash-section ul {
+            list-style: none;
+        }
+        .dash-section ul li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .dash-section ul li:last-child {
+            border-bottom: none;
+        }
+        .dash-section ul li .status {
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .status-new { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .status-active { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+        .status-closed { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+        .status-pending { background: rgba(251, 146, 60, 0.2); color: #fb923c; }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 14px;
+            transition: 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #7c3aed;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .form-group select option {
+            background: #2d1b69;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .btn-submit {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(124, 58, 237, 0.3);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        .btn-danger:hover {
+            box-shadow: 0 8px 30px rgba(239, 68, 68, 0.3);
+        }
+        
+        .msg-box {
+            padding: 12px 18px;
+            border-radius: 12px;
+            display: none;
+            margin-bottom: 15px;
+        }
+        .msg-box.success {
+            display: block;
+            color: #6ee7b7;
+            background: rgba(110, 231, 183, 0.1);
+            border: 1px solid rgba(110, 231, 183, 0.15);
+        }
+        .msg-box.error {
+            display: block;
+            color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.15);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        table th {
+            text-align: left;
+            padding: 12px 15px;
+            color: rgba(255, 255, 255, 0.6);
+            font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        table tr:hover td {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        @media (max-width: 900px) {
+            .login-grid { grid-template-columns: 1fr; }
+            .dash-sections { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .brand-panel h1 { font-size: 24px; }
+            .dash-header { flex-direction: column; text-align: center; }
+            .nav-menu { justify-content: center; }
+        }
+        @media (max-width: 480px) {
+            .brand-panel h1 { font-size: 22px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .nav-menu button { padding: 8px 14px; font-size: 12px; }
+        }
+    </style>
 </head>
 <body>
-    <div id="toastHost" class="toast-host"></div>
-    <div id="loading" class="loading hidden"><span></span><strong>Loading</strong></div>
 
-    <main id="loginView" class="login-view">
-        <section class="login-panel">
-            <div class="login-header">
-                <div class="brand-mark">IC</div>
-                <span class="eyebrow">🔐 Secure access</span>
-                <h1>IntelliCrime System</h1>
-                <p>Smart crime investigation and criminal record management</p>
+    <div class="login-page" id="loginPage">
+        <div class="app-container">
+            <div class="login-grid">
+                <div class="brand-panel">
+                    <div class="badge">🔍 ADBMS · Semester Project</div>
+                    <h1>Intelli<span>Crime</span></h1>
+                    <p>Smart crime investigation platform with Oracle PL/SQL, real-time alerts, and intelligent case management.</p>
+                    <div class="feature-tags">
+                        <span>⚡ Real-time Alerts</span>
+                        <span>🔐 Role-based Access</span>
+                        <span>📊 Analytics</span>
+                        <span>🔍 Evidence Tracking</span>
+                    </div>
+                </div>
+                <div class="form-panel">
+                    <div class="form-tabs">
+                        <button class="active" data-tab="login">Sign In</button>
+                        <button data-tab="register">Create Account</button>
+                    </div>
+                    <form class="auth-form" id="loginForm">
+                        <div class="error-msg" id="loginError">Invalid credentials</div>
+                        <label>Username <input type="text" id="loginUsername" placeholder="Enter your username" required /></label>
+                        <label>Password <input type="password" id="loginPassword" placeholder="Enter your password" required /></label>
+                        <button type="submit" class="btn-primary">Sign In</button>
+                    </form>
+                    <form class="auth-form hidden" id="registerForm">
+                        <div class="error-msg" id="registerError"></div>
+                        <div class="success-msg" id="registerSuccess">Account created! Please sign in.</div>
+                        <label>Full Name <input type="text" id="regFullName" placeholder="Your full name" required /></label>
+                        <label>Username <input type="text" id="regUsername" placeholder="Choose a username" required /></label>
+                        <label>Email <input type="email" id="regEmail" placeholder="your@email.com" /></label>
+                        <label>Phone <input type="text" id="regPhone" placeholder="03XX-XXXXXXX" /></label>
+                        <label>Password <input type="password" id="regPassword" placeholder="Min 6 characters" required minlength="6" /></label>
+                        <label>Role
+                            <select id="regRole">
+                                <option value="OFFICER">Officer</option>
+                                <option value="ANALYST">Analyst</option>
+                                <option value="VIEWER">Viewer</option>
+                            </select>
+                        </label>
+                        <button type="submit" class="btn-primary">Create Account</button>
+                    </form>
+                </div>
             </div>
-            <form id="loginForm" class="form-grid">
-                <label>Username<input name="username" autocomplete="username" required value="admin"></label>
-                <label>Password<input name="password" type="password" autocomplete="current-password" required value="admin123"></label>
-                <button class="primary" type="submit">🔐 Login</button>
+        </div>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        <div class="dash-header">
+            <div class="logo">🔍 IntelliCrime</div>
+            <div class="user-info">
+                <span id="dashUserName">User</span>
+                <span class="role-badge" id="dashUserRole">Role</span>
+                <button class="btn-logout" id="logoutBtn">🚪 Logout</button>
+            </div>
+        </div>
+
+        <div class="nav-menu" id="navMenu">
+            <button class="active" data-page="dashboard">📊 Dashboard</button>
+            <button data-page="firs">📋 FIRs</button>
+            <button data-page="criminals">👤 Criminals</button>
+            <button data-page="cases">📁 Cases</button>
+            <button data-page="evidence">🔍 Evidence</button>
+            <button data-page="vehicles">🚗 Vehicles</button>
+            <button data-page="mobiles">📱 Mobiles</button>
+            <button data-page="alerts">🔔 Alerts</button>
+        </div>
+
+        <div class="content-area active" id="page-dashboard">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h2>📊 Dashboard Summary Overview</h2>
+                <button class="btn-submit" id="exportBtn" style="background: linear-gradient(135deg, #10b981, #059669); padding: 8px 16px; font-size: 14px;">📥 Download Complete CSV Report</button>
+            </div>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card"><div class="number" id="statFirs">0</div><div class="label">Total FIRs</div></div>
+                <div class="stat-card"><div class="number" id="statCases">0</div><div class="label">Active Cases</div></div>
+                <div class="stat-card"><div class="number" id="statCriminals">0</div><div class="label">Criminals</div></div>
+                <div class="stat-card"><div class="number" id="statEvidence">0</div><div class="label">Evidence Items</div></div>
+                <div class="stat-card"><div class="number" id="statAlerts">0</div><div class="label">New Alerts</div></div>
+            </div>
+            <div class="dash-sections">
+                <div class="dash-section">
+                    <h3>📋 Recent FIRs</h3>
+                    <ul id="recentFirs"><li style="color:rgba(255,255,255,0.4);text-align:center;padding:15px;">Loading...</li></ul>
+                </div>
+                <div class="dash-section">
+                    <h3>🔔 Recent Alerts</h3>
+                    <ul id="recentAlerts"><li style="color:rgba(255,255,255,0.4);text-align:center;padding:15px;">Loading...</li></ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area" id="page-firs">
+            <h2>📋 Register New FIR</h2>
+            <div id="firMessage" class="msg-box"></div>
+            <form id="firForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>FIR Number</label>
+                        <input type="text" id="firNo" placeholder="FIR-2026-0001" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Station</label>
+                        <select id="firStation"><option value="">Loading...</option></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Crime Type</label>
+                        <select id="firCrimeType"><option value="">Loading...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <select id="firLocation"><option value="">Loading...</option></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Reported By</label>
+                    <input type="text" id="firReportedBy" placeholder="Reporter name" required />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Reporter CNIC</label>
+                        <input type="text" id="firReporterCnic" placeholder="37405-XXXXXXX-X" />
+                    </div>
+                    <div class="form-group">
+                        <label>Reporter Phone</label>
+                        <input type="text" id="firReporterPhone" placeholder="03XX-XXXXXXX" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="firDescription" placeholder="Describe the incident..." required></textarea>
+                </div>
+                <button type="submit" class="btn-submit">Register FIR</button>
             </form>
-            <div class="demo-logins">
-                <span>admin / admin123</span>
-                <span>officer1 / officer123</span>
-                <span>analyst1 / analyst123</span>
-                <span>entry1 / entry123</span>
+            
+            <h3 style="margin-top:30px;color:rgba(255,255,255,0.7);font-size:16px;">📋 Recent FIRs</h3>
+            <div class="table-container">
+                <table id="firTable">
+                    <thead><tr><th>FIR No</th><th>Reported By</th><th>Status</th><th>Date</th></tr></thead>
+                    <tbody id="firTableBody"><tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">Loading...</td></tr></tbody>
+                </table>
             </div>
-        </section>
-    </main>
+        </div>
 
-    <div id="appView" class="app-shell hidden">
-        <aside id="sidebar" class="sidebar">
-            <div class="sidebar-brand">
-                <div class="brand-mark small">IC</div>
-                <div>
-                    <strong>IntelliCrime</strong>
-                    <span id="rolePill">System</span>
+        <div class="content-area" id="page-criminals">
+            <h2>👤 Add New Criminal</h2>
+            <div id="criminalMessage" class="msg-box"></div>
+            <form id="criminalForm">
+                <div class="form-group">
+                    <label>Criminal Name</label>
+                    <input type="text" id="criminalName" placeholder="Full name" required />
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>CNIC</label>
+                        <input type="text" id="criminalCnic" placeholder="61101-XXXXXXX-X" />
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="criminalGender">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="criminalDob" />
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="text" id="criminalPhone" placeholder="03XX-XXXXXXX" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="criminalAddress" placeholder="Full address" />
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="criminalStatus">
+                        <option value="SUSPECT">Suspect</option>
+                        <option value="WANTED">Wanted</option>
+                        <option value="ARRESTED">Arrested</option>
+                        <option value="CONVICTED">Convicted</option>
+                        <option value="RELEASED">Released</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-submit">Add Criminal</button>
+            </form>
+            
+            <h3 style="margin-top:30px;color:rgba(255,255,255,0.7);font-size:16px;">👤 Criminals List</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Name</th><th>CNIC</th><th>Status</th><th>Phone</th></tr></thead>
+                    <tbody id="criminalTableBody"><tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">Loading...</td></tr></tbody>
+                </table>
             </div>
-            <nav>
-                <button class="nav-btn active" data-section="dashboard"><span>🏠</span>Dashboard</button>
-                <button class="nav-btn" data-section="firs"><span>📄</span>FIRs</button>
-                <button class="nav-btn" data-section="criminals"><span>👤</span>Criminals</button>
-                <button class="nav-btn" data-section="cases"><span>📁</span>Cases</button>
-                <button class="nav-btn" data-section="evidence"><span>🔍</span>Evidence</button>
-                <button class="nav-btn" data-section="vehicles"><span>🚗</span>Vehicles</button>
-                <button class="nav-btn" data-section="mobiles"><span>📱</span>Mobile Numbers</button>
-                <button class="nav-btn" data-section="alerts"><span>🚨</span>Alerts</button>
-                <button class="nav-btn" data-section="reports"><span>📊</span>Reports</button>
-                <button class="nav-btn" data-section="admin"><span>⚙️</span>Administration</button>
-            </nav>
-        </aside>
+        </div>
 
-        <div class="main-area">
-            <header class="topbar">
-                <button id="mobileMenu" class="icon-btn" type="button">☰</button>
-                <div>
-                    <h2 id="sectionTitle">Dashboard</h2>
-                    <span id="userBadge"></span>
+        <div class="content-area" id="page-cases">
+            <h2>📁 Manual Case File Processing</h2>
+            <div id="caseMessage" class="msg-box"></div>
+            <form id="caseForm">
+                <input type="hidden" id="caseIdField" value="" />
+                <div class="form-group">
+                    <label>Case Title</label>
+                    <input type="text" id="caseTitle" placeholder="Enter case title" required />
                 </div>
-                <button id="logoutBtn" class="ghost" type="button">🚪 Logout</button>
-            </header>
-
-            <section id="dashboard" class="section active">
-                <div id="dashboardCards" class="metric-grid"></div>
-                <div class="content-grid">
-                    <article class="panel"><h3>📄 Recent FIRs</h3><div id="recentFirs"></div></article>
-                    <article class="panel"><h3>🚨 Recent Alerts</h3><div id="recentAlerts"></div></article>
-                    <article class="panel"><h3>⚠️ Top Crime Locations</h3><div id="topLocations"></div></article>
-                    <article class="panel"><h3>👮 Officer Workload</h3><div id="officerWorkload"></div></article>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>FIR Sequence Reference</label>
+                        <select id="caseFir"><option value="">Select FIR...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Assign Officer</label>
+                        <select id="caseOfficer"><option value="">Select Officer</option></select>
+                    </div>
                 </div>
-            </section>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="caseDescription" placeholder="Case description..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="casePriority">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="caseStatus">
+                            <option value="OPEN">Open</option>
+                            <option value="UNDER_INVESTIGATION">Under Investigation</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="SOLVED">Solved</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn-submit" id="caseSubmitBtn">Create Case</button>
+                    <button type="button" class="btn-submit btn-danger hidden" id="caseResetBtn">Cancel Edit</button>
+                </div>
+            </form>
+            
+            <h3 style="margin-top:30px;color:rgba(255,255,255,0.7);font-size:16px;">📁 Cases List</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Title</th><th>FIR No</th><th>Status</th><th>Priority</th><th>Actions</th></tr></thead>
+                    <tbody id="caseTableBody"><tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.4);">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
 
-            <section id="firs" class="section">
-                <div class="toolbar"><input id="firSearch" placeholder="🔎 Search FIR or reporter"><select id="firStatus"><option value="">All statuses</option><option>REGISTERED</option><option>VERIFIED</option><option>REJECTED</option><option>ARCHIVED</option></select><button class="primary" data-open-form="fir">➕ New FIR</button></div>
-                <div id="firsTable" class="table-wrap"></div>
-            </section>
+        <div class="content-area" id="page-evidence">
+            <h2>🔍 Add Evidence</h2>
+            <div id="evidenceMessage" class="msg-box"></div>
+            <form id="evidenceForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Case</label>
+                        <select id="evidenceCase"><option value="">Loading Cases...</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Evidence Code</label>
+                        <input type="text" id="evidenceCode" placeholder="EV-2026-0001" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Evidence Type</label>
+                        <input type="text" id="evidenceType" placeholder="Physical/Digital/Document" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Storage Location</label>
+                        <input type="text" id="evidenceStorage" placeholder="Locker A-1" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="evidenceDescription" placeholder="Evidence description..."></textarea>
+                </div>
+                <button type="submit" class="btn-submit">Add Evidence</button>
+            </form>
+            
+            <h3 style="margin-top:30px;color:rgba(255,255,255,0.7);font-size:16px;">🔍 Evidence List</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Code</th><th>Type</th><th>Case</th><th>Status</th></tr></thead>
+                    <tbody id="evidenceTableBody"><tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
 
-            <section id="criminals" class="section">
-                <div class="toolbar"><input id="criminalSearch" placeholder="🔎 Search name, CNIC or phone"><select id="criminalStatus"><option value="">All statuses</option><option>SUSPECT</option><option>WANTED</option><option>ARRESTED</option><option>CONVICTED</option><option>RELEASED</option><option>CLEARED</option></select><button class="primary" data-open-form="criminal">➕ Add Criminal</button></div>
-                <div id="criminalsTable" class="table-wrap"></div>
-            </section>
+        <div class="content-area" id="page-vehicles">
+            <h2>🚗 Add Vehicle</h2>
+            <div id="vehicleMessage" class="msg-box"></div>
+            <form id="vehicleForm">
+                <div class="form-group">
+                    <label>Vehicle Number</label>
+                    <input type="text" id="vehicleNumber" placeholder="ABC-123" required />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Owner Name</label>
+                        <input type="text" id="vehicleOwner" placeholder="Owner name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Owner CNIC</label>
+                        <input type="text" id="vehicleOwnerCnic" placeholder="61101-XXXXXXX-X" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Vehicle Type</label>
+                        <input type="text" id="vehicleType" placeholder="Car/Motorcycle/Truck" />
+                    </div>
+                    <div class="form-group">
+                        <label>Color</label>
+                        <input type="text" id="vehicleColor" placeholder="White/Black/Silver" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Make</label>
+                        <input type="text" id="vehicleMake" placeholder="Honda/Toyota/Suzuki" />
+                    </div>
+                    <div class="form-group">
+                        <label>Model</label>
+                        <input type="text" id="vehicleModel" placeholder="Civic/Corolla/Cultus" />
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Add Vehicle</button>
+            </form>
+            
+            <h3 style="margin-top:30px;color:rgba(255,255,255,0.7);font-size:16px;">🚗 Vehicles List</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Number</th><th>Owner</th><th>Type</th><th>Color</th></tr></thead>
+                    <tbody id="vehicleTableBody"><tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
 
-            <section id="cases" class="section">
-                <div class="toolbar"><input id="caseSearch" placeholder="🔎 Search case or FIR"><select id="caseStatus"><option value="">All statuses</option><option>OPEN</option><option>UNDER_INVESTIGATION</option><option>PENDING</option><option>SOLVED</option><option>CLOSED</option><option>ARCHIVED</option></select></div>
-                <div id="casesTable" class="table-wrap"></div>
-                <article id="caseDetail" class="panel detail-panel hidden"></article>
-            </section>
+        <div class="content-area" id="page-mobiles">
+            <h2>📱 Add Mobile Number</h2>
+            <div id="mobileMessage" class="msg-box"></div>
+            <form id="mobileForm">
+                <div class="form-group">
+                    <label>Mobile Number</label>
+                    <input type="text" id="mobileNumber" placeholder="03XX-XXXXXXX" required />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Owner Name</label>
+                        <input type="text" id="mobileOwner" placeholder="Owner name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Network</label>
+                        <input type="text" id="mobileNetwork" placeholder="Jazz/Zong/Ufone" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Registered CNIC</label>
+                    <input type="text" id="mobileCnic" placeholder="61101-XXXXXXX-X" />
+                </div>
+                <button type="submit" class="btn-submit">Add Mobile Number</button>
+            </form>
+            
+            <h3 style="margin-top:30px;color:rgba(255,255,255,0.7);font-size:16px;">📱 Mobile Numbers List</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Number</th><th>Owner</th><th>Network</th><th>CNIC</th></tr></thead>
+                    <tbody id="mobileTableBody"><tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
 
-            <section id="evidence" class="section">
-                <div class="toolbar"><input id="evidenceSearch" placeholder="🔎 Search evidence code"><select id="evidenceStatus"><option value="">All statuses</option><option>PENDING</option><option>VERIFIED</option><option>REJECTED</option><option>ARCHIVED</option></select><button class="primary" data-open-form="evidence">➕ Add Evidence</button></div>
-                <div id="evidenceTable" class="table-wrap"></div>
-            </section>
-
-            <section id="vehicles" class="section">
-                <div class="toolbar"><input id="vehicleSearch" placeholder="🔎 Search number, owner or model"><button class="primary" data-open-form="vehicle">➕ Add Vehicle</button></div>
-                <div id="vehiclesTable" class="table-wrap"></div>
-            </section>
-
-            <section id="mobiles" class="section">
-                <div class="toolbar"><input id="mobileSearch" placeholder="🔎 Search number, owner or CNIC"><button class="primary" data-open-form="mobile">➕ Add Mobile</button></div>
-                <div id="mobilesTable" class="table-wrap"></div>
-            </section>
-
-            <section id="alerts" class="section">
-                <div class="toolbar"><select id="alertStatus"><option value="">All statuses</option><option>NEW</option><option>REVIEWED</option><option>RESOLVED</option><option>DISMISSED</option></select></div>
-                <div id="alertsTable" class="table-wrap"></div>
-            </section>
-
-            <section id="reports" class="section">
-                <div class="toolbar"><button id="loadReports" class="primary">📊 Refresh Reports</button><button id="exportReports" class="ghost">⬇ Export CSV</button></div>
-                <div id="reportsGrid" class="content-grid"></div>
-            </section>
-
-            <section id="admin" class="section">
-                <div id="adminPanel" class="content-grid"></div>
-            </section>
+        <div class="content-area" id="page-alerts">
+            <h2>🔔 Alerts</h2>
+            <div id="alertMessage" class="msg-box"></div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                <button class="btn-submit" id="resolveAlertBtn" style="padding:8px 20px;font-size:13px;">✅ Resolve Selected</button>
+                <button class="btn-submit btn-danger" id="dismissAlertBtn" style="padding:8px 20px;font-size:13px;">❌ Dismiss Selected</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th><input type="checkbox" id="selectAllAlerts" /></th><th>Type</th><th>Message</th><th>Status</th><th>Date</th></tr></thead>
+                    <tbody id="alertTableBody"><tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.4);">Loading...</td></tr></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
-        <form id="modalForm" class="modal-box">
-            <header><h3 id="modalTitle">Form</h3><button type="button" class="icon-btn" data-close-modal>×</button></header>
-            <div id="modalFields" class="form-grid"></div>
-            <footer><button type="button" class="ghost" data-close-modal>Cancel</button><button class="primary" type="submit">✅ Save</button></footer>
-        </form>
-    </div>
+    <script>
+        (function() {
+            'use strict';
 
-    <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true">
-        <div class="modal-box compact">
-            <h3>⚠️ Confirm action</h3>
-            <p id="confirmText"></p>
-            <footer><button id="cancelConfirm" class="ghost" type="button">Cancel</button><button id="okConfirm" class="danger" type="button">🗑️ Confirm</button></footer>
-        </div>
-    </div>
+            // Global execution profile caching state context
+            let activeUserRole = 'VIEWER';
 
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+            // ===== DOM REFS =====
+            const loginPage = document.getElementById('loginPage');
+            const dashboard = document.getElementById('dashboard');
+            const tabs = document.querySelectorAll('.form-tabs button');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const loginError = document.getElementById('loginError');
+            const registerError = document.getElementById('registerError');
+            const registerSuccess = document.getElementById('registerSuccess');
+
+            // ===== LOGIN / REGISTER =====
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    const target = this.dataset.tab;
+                    if (target === 'login') {
+                        loginForm.classList.remove('hidden');
+                        registerForm.classList.add('hidden');
+                        loginError.classList.remove('show');
+                        registerError.classList.remove('show');
+                        registerSuccess.classList.remove('show');
+                    } else {
+                        loginForm.classList.add('hidden');
+                        registerForm.classList.remove('hidden');
+                        loginError.classList.remove('show');
+                        registerError.classList.remove('show');
+                        registerSuccess.classList.remove('show');
+                    }
+                });
+            });
+
+            // ===== CSV EXPORT LOGIC =====
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                window.location.href = '/api/reports/export';
+            });
+
+            // ===== LOGIN =====
+            document.getElementById('loginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                loginError.classList.remove('show');
+                const username = document.getElementById('loginUsername').value.trim();
+                const password = document.getElementById('loginPassword').value.trim();
+                if (!username || !password) {
+                    loginError.textContent = 'Please fill in both fields.';
+                    loginError.classList.add('show');
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        showDashboard(data.user);
+                    } else {
+                        loginError.textContent = data.error || 'Login failed.';
+                        loginError.classList.add('show');
+                    }
+                } catch (_) {
+                    loginError.textContent = 'Network error. Please try again.';
+                    loginError.classList.add('show');
+                }
+            });
+
+            // ===== REGISTER =====
+            document.getElementById('registerForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                registerError.classList.remove('show');
+                registerSuccess.classList.remove('show');
+                const fullName = document.getElementById('regFullName').value.trim();
+                const username = document.getElementById('regUsername').value.trim();
+                const email = document.getElementById('regEmail').value.trim();
+                const phone = document.getElementById('regPhone').value.trim();
+                const password = document.getElementById('regPassword').value.trim();
+                const role = document.getElementById('regRole').value;
+                if (!fullName || !username || !password) {
+                    registerError.textContent = 'Full Name, Username, and Password are required.';
+                    registerError.classList.add('show');
+                    return;
+                }
+                if (password.length < 6) {
+                    registerError.textContent = 'Password must be at least 6 characters.';
+                    registerError.classList.add('show');
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ full_name: fullName, username, email, phone, password, role_name: role })
+                    });
+                    const data = await res.json();
+                    if (data.ok) {
+                        registerSuccess.textContent = 'Account created! Please sign in.';
+                        registerSuccess.classList.add('show');
+                        document.getElementById('regFullName').value = '';
+                        document.getElementById('regUsername').value = '';
+                        document.getElementById('regEmail').value = '';
+                        document.getElementById('regPhone').value = '';
+                        document.getElementById('regPassword').value = '';
+                        setTimeout(() => {
+                            document.querySelector('.form-tabs button[data-tab="login"]').click();
+                            document.getElementById('loginUsername').value = username;
+                        }, 1500);
+                    } else {
+                        registerError.textContent = data.error || 'Registration failed.';
+                        registerError.classList.add('show');
+                    }
+                } catch (_) {
+                    registerError.textContent = 'Network error. Please try again.';
+                    registerError.classList.add('show');
+                }
+            });
+
+            // ===== LOGOUT =====
+            document.getElementById('logoutBtn').addEventListener('click', async function() {
+                try { await fetch('/api/logout', { method: 'POST' }); } catch (_) {}
+                loginPage.classList.remove('hidden');
+                dashboard.classList.remove('active');
+                document.getElementById('loginUsername').value = '';
+                document.getElementById('loginPassword').value = '';
+                document.querySelectorAll('.nav-menu button').forEach(b => b.classList.remove('active'));
+                document.querySelector('.nav-menu button[data-page="dashboard"]').classList.add('active');
+                document.querySelectorAll('.content-area').forEach(c => c.classList.remove('active'));
+                document.getElementById('page-dashboard').classList.add('active');
+            });
+
+            // ===== NAVIGATION =====
+            document.querySelectorAll('.nav-menu button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.nav-menu button').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const page = this.dataset.page;
+                    document.querySelectorAll('.content-area').forEach(c => c.classList.remove('active'));
+                    document.getElementById('page-' + page).classList.add('active');
+                    loadPageData(page);
+                });
+            });
+
+            // ===== LOAD PAGE DATA =====
+            function loadPageData(page) {
+                if (page === 'firs') loadFirs();
+                else if (page === 'criminals') loadCriminals();
+                else if (page === 'cases') loadCases();
+                else if (page === 'evidence') loadEvidence();
+                else if (page === 'vehicles') loadVehicles();
+                else if (page === 'mobiles') loadMobiles();
+                else if (page === 'alerts') loadAlerts();
+            }
+
+            // ===== SHOW DASHBOARD =====
+            async function showDashboard(user) {
+                loginPage.classList.add('hidden');
+                dashboard.classList.add('active');
+                document.getElementById('dashUserName').textContent = user.full_name || user.username;
+                document.getElementById('dashUserRole').textContent = user.role_label || user.role_name || 'USER';
+                
+                // Cache active runtime user state contexts globally
+                activeUserRole = user.role_name || 'VIEWER';
+
+                // Enforce frontend view restrictions for read-only tracking configurations
+                const readOnlyRoles = ['VIEWER', 'ANALYST'];
+                const disableForms = readOnlyRoles.includes(activeUserRole);
+                
+                document.querySelectorAll('.content-area form').forEach(f => {
+                    if (f.id !== 'loginForm' && f.id !== 'registerForm') {
+                        // Keep form fields clean or freeze input tags entirely
+                        [...f.elements].forEach(el => el.disabled = disableForms);
+                        const btn = f.querySelector('button[type="submit"]');
+                        if (btn) btn.style.display = disableForms ? 'none' : 'block';
+                    }
+                });
+
+                try {
+                    const res = await fetch('/api/dashboard');
+                    const data = await res.json();
+                    if (data.ok) {
+                        document.getElementById('statFirs').textContent = data.totals?.firs || 0;
+                        document.getElementById('statCases').textContent = data.totals?.active_cases || 0;
+                        document.getElementById('statCriminals').textContent = data.totals?.criminals || 0;
+                        document.getElementById('statEvidence').textContent = data.totals?.evidence || 0;
+                        document.getElementById('statAlerts').textContent = data.totals?.new_alerts || 0;
+
+                        const firList = document.getElementById('recentFirs');
+                        firList.innerHTML = '';
+                        if (data.recent_firs && data.recent_firs.length > 0) {
+                            data.recent_firs.forEach(f => {
+                                const li = document.createElement('li');
+                                const sc = f.fir_status?.toLowerCase() === 'registered' ? 'new' : f.fir_status?.toLowerCase() === 'verified' ? 'active' : 'pending';
+                                li.innerHTML = `<span>${f.fir_no}</span><span class="status status-${sc}">${f.fir_status || 'NEW'}</span>`;
+                                firList.appendChild(li);
+                            });
+                        } else {
+                            firList.innerHTML = '<li style="color:rgba(255,255,255,0.4);text-align:center;padding:15px;">No FIRs found</li>';
+                        }
+
+                        const alertList = document.getElementById('recentAlerts');
+                        alertList.innerHTML = '';
+                        if (data.recent_alerts && data.recent_alerts.length > 0) {
+                            data.recent_alerts.forEach(a => {
+                                const li = document.createElement('li');
+                                const sc = a.alert_status?.toLowerCase() === 'new' ? 'new' : a.alert_status?.toLowerCase() === 'resolved' ? 'closed' : 'pending';
+                                li.innerHTML = `<span>${(a.alert_message || a.alert_type || 'Alert').substring(0, 40)}</span><span class="status status-${sc}">${a.alert_status || 'NEW'}</span>`;
+                                alertList.appendChild(li);
+                            });
+                        } else {
+                            alertList.innerHTML = '<li style="color:rgba(255,255,255,0.4);text-align:center;padding:15px;">No alerts found</li>';
+                        }
+                    }
+                } catch (err) { console.error('Dashboard error:', err); }
+
+                loadLookups();
+                loadFirs();
+                loadCriminals();
+                loadCases();
+                loadEvidence();
+                loadVehicles();
+                loadMobiles();
+                loadAlerts();
+            }
+
+            // ===== LOAD LOOKUPS =====
+            async function loadLookups() {
+                try {
+                    const res = await fetch('/api/lookups');
+                    const data = await res.json();
+                    if (data.ok) {
+                        // Stations
+                        const st = document.getElementById('firStation');
+                        st.innerHTML = '<option value="">Select Station</option>';
+                        data.stations.forEach(s => { st.innerHTML += `<option value="${s.station_id}">${s.station_name}</option>`; });
+
+                        // Crime Types
+                        const ct = document.getElementById('firCrimeType');
+                        ct.innerHTML = '<option value="">Select Crime Type</option>';
+                        data.crime_types.forEach(c => { ct.innerHTML += `<option value="${c.crime_type_id}">${c.crime_type_name}</option>`; });
+
+                        // Locations
+                        const loc = document.getElementById('firLocation');
+                        loc.innerHTML = '<option value="">Select Location</option>';
+                        data.locations.forEach(l => { loc.innerHTML += `<option value="${l.location_id}">${l.area_name}, ${l.city}</option>`; });
+
+                        // Officers for Cases
+                        const off = document.getElementById('caseOfficer');
+                        off.innerHTML = '<option value="">Select Officer</option>';
+                        data.officers.forEach(o => { off.innerHTML += `<option value="${o.officer_id}">${o.officer_name}</option>`; });
+
+                        // FIRs for Cases dropdown mapping layout
+                        const cf = document.getElementById('caseFir');
+                        cf.innerHTML = '<option value="">Select FIR</option>';
+                        if (data.cases) {
+                            data.cases.forEach(c => { cf.innerHTML += `<option value="${c.case_id}">${c.case_title}</option>`; });
+                        }
+
+                        // Cases for Evidence
+                        const ec = document.getElementById('evidenceCase');
+                        ec.innerHTML = '<option value="">Select Case</option>';
+                        if (data.cases) {
+                            data.cases.forEach(c => { ec.innerHTML += `<option value="${c.case_id}">${c.case_title}</option>`; });
+                        }
+                    }
+                } catch (err) { console.error('Lookup error:', err); }
+            }
+
+            // ===== LOAD FIRS =====
+            async function loadFirs() {
+                try {
+                    const res = await fetch('/api/firs?size=20');
+                    const data = await res.json();
+                    const tbody = document.getElementById('firTableBody');
+                    if (data.ok && data.rows && data.rows.length > 0) {
+                        tbody.innerHTML = data.rows.map(f => `
+                            <tr>
+                                <td>${f.fir_no}</td>
+                                <td>${f.reported_by}</td>
+                                <td><span class="status status-${f.fir_status?.toLowerCase() === 'registered' ? 'new' : 'active'}">${f.fir_status}</span></td>
+                                <td>${f.report_date ? f.report_date.substring(0,10) : ''}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">No FIRs found</td></tr>';
+                    }
+                } catch (err) { console.error('Load FIRs error:', err); }
+            }
+
+            // ===== LOAD CRIMINALS =====
+            async function loadCriminals() {
+                try {
+                    const res = await fetch('/api/criminals?size=20');
+                    const data = await res.json();
+                    const tbody = document.getElementById('criminalTableBody');
+                    if (data.ok && data.rows && data.rows.length > 0) {
+                        tbody.innerHTML = data.rows.map(c => `
+                            <tr>
+                                <td>${c.criminal_name}</td>
+                                <td>${c.cnic || '-'}</td>
+                                <td><span class="status status-${c.criminal_status?.toLowerCase() === 'cleared' ? 'closed' : 'active'}">${c.criminal_status}</span></td>
+                                <td>${c.phone || '-'}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">No criminals found</td></tr>';
+                    }
+                } catch (err) { console.error('Load criminals error:', err); }
+            }
+
+            // ===== LOAD CASES =====
+            async function loadCases() {
+                try {
+                    const res = await fetch('/api/cases?size=20');
+                    const data = await res.json();
+                    const tbody = document.getElementById('caseTableBody');
+                    if (data.ok && data.rows && data.rows.length > 0) {
+                        tbody.innerHTML = data.rows.map(c => {
+                            const showActions = activeUserRole !== 'VIEWER';
+                            const actionCell = showActions ? 
+                                `<td><button class="btn-submit" onclick="window.setupCaseEdit(${c.case_id}, '${encodeURIComponent(c.case_title)}', '${encodeURIComponent(c.case_description || '')}', '${c.priority}', '${c.case_status}', '${c.fir_id || ''}', '${c.officer_id || ''}')" style="padding:4px 10px; font-size:11px;">✏️ Edit</button></td>` : 
+                                `<td><span style="color:rgba(255,255,255,0.3); font-size:12px;">Locked</span></td>`;
+                            return `
+                                <tr>
+                                    <td>${c.case_title}</td>
+                                    <td>${c.fir_no || '-'}</td>
+                                    <td><span class="status status-${c.case_status?.toLowerCase() === 'closed' ? 'closed' : c.case_status?.toLowerCase() === 'open' ? 'new' : 'active'}">${c.case_status}</span></td>
+                                    <td><span class="status status-${c.priority?.toLowerCase() === 'critical' ? 'new' : c.priority?.toLowerCase() === 'high' ? 'pending' : 'active'}">${c.priority}</span></td>
+                                    ${actionCell}
+                                </tr>
+                            `;
+                        }).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.4);">No cases found</td></tr>';
+                    }
+                } catch (err) { console.error('Load cases error:', err); }
+            }
+
+            // Expose setup edit parameters globally to cross-reference table operations
+            window.setupCaseEdit = function(id, title, desc, priority, status, firId, officerId) {
+                document.getElementById('caseIdField').value = id;
+                document.getElementById('caseTitle').value = decodeURIComponent(title);
+                document.getElementById('caseDescription').value = decodeURIComponent(desc);
+                document.getElementById('casePriority').value = priority;
+                document.getElementById('caseStatus').value = status;
+                document.getElementById('caseFir').value = firId;
+                document.getElementById('caseOfficer').value = officerId;
+                
+                document.getElementById('caseSubmitBtn').textContent = 'Update Case Entry';
+                document.getElementById('caseResetBtn').classList.remove('hidden');
+                document.getElementById('caseTitle').focus();
+            };
+
+            document.getElementById('caseResetBtn').addEventListener('click', function() {
+                document.getElementById('caseForm').reset();
+                document.getElementById('caseIdField').value = '';
+                document.getElementById('caseSubmitBtn').textContent = 'Create Case';
+                this.classList.add('hidden');
+            });
+
+            // ===== LOAD EVIDENCE =====
+            async function loadEvidence() {
+                try {
+                    const res = await fetch('/api/evidence?size=20');
+                    const data = await res.json();
+                    const tbody = document.getElementById('evidenceTableBody');
+                    if (data.ok && data.rows && data.rows.length > 0) {
+                        tbody.innerHTML = data.rows.map(e => `
+                            <tr>
+                                <td>${e.evidence_code}</td>
+                                <td>${e.evidence_type}</td>
+                                <td>${e.case_title || '-'}</td>
+                                <td><span class="status status-${e.verification_status?.toLowerCase() === 'verified' ? 'active' : e.verification_status?.toLowerCase() === 'archived' ? 'closed' : 'pending'}">${e.verification_status}</span></td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">No evidence found</td></tr>';
+                    }
+                } catch (err) { console.error('Load evidence error:', err); }
+            }
+
+            // ===== LOAD VEHICLES =====
+            async function loadVehicles() {
+                try {
+                    const res = await fetch('/api/vehicles?size=20');
+                    const data = await res.json();
+                    const tbody = document.getElementById('vehicleTableBody');
+                    if (data.ok && data.rows && data.rows.length > 0) {
+                        tbody.innerHTML = data.rows.map(v => `
+                            <tr>
+                                <td>${v.vehicle_number}</td>
+                                <td>${v.owner_name || '-'}</td>
+                                <td>${v.vehicle_type || '-'}</td>
+                                <td>${v.color || '-'}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">No vehicles found</td></tr>';
+                    }
+                } catch (err) { console.error('Load vehicles error:', err); }
+            }
+
+            // ===== LOAD MOBILES =====
+            async function loadMobiles() {
+                try {
+                    const res = await fetch('/api/mobiles?size=20');
+                    const data = await res.json();
+                    const tbody = document.getElementById('mobileTableBody');
+                    if (data.ok && data.rows && data.rows.length > 0) {
+                        tbody.innerHTML = data.rows.map(m => `
+                            <tr>
+                                <td>${m.mobile_number}</td>
+                                <td>${m.owner_name || '-'}</td>
+                                <td>${m.network || '-'}</td>
+                                <td>${m.registered_cnic || '-'}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:rgba(255,255,255,0.4);">No mobile numbers found</td></tr>';
+                    }
+                } catch (err) { console.error('Load mobiles error:', err); }
+            }
+
+            // ===== LOAD ALERTS =====
+            async function loadAlerts() {
+                try {
+                    const res = await fetch('/api/alerts?size=50');
+                    const data = await res.json();
+                    const tbody = document.getElementById('alertTableBody');
+                    if (data.ok && data.rows && data.rows.length > 0) {
+                        tbody.innerHTML = data.rows.map(a => `
+                            <tr>
+                                <td><input type="checkbox" class="alert-checkbox" value="${a.alert_id}" /></td>
+                                <td>${a.alert_type}</td>
+                                <td>${(a.alert_message || '').substring(0, 50)}${(a.alert_message || '').length > 50 ? '...' : ''}</td>
+                                <td><span class="status status-${a.alert_status?.toLowerCase() === 'new' ? 'new' : a.alert_status?.toLowerCase() === 'resolved' ? 'closed' : 'pending'}">${a.alert_status}</span></td>
+                                <td>${a.alert_date ? a.alert_date.substring(0,10) : ''}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:rgba(255,255,255,0.4);">No alerts found</td></tr>';
+                    }
+                } catch (err) { console.error('Load alerts error:', err); }
+            }
+
+            // ===== SELECT ALL ALERTS =====
+            document.getElementById('selectAllAlerts').addEventListener('change', function() {
+                document.querySelectorAll('.alert-checkbox').forEach(cb => cb.checked = this.checked);
+            });
+
+            // ===== RESOLVE ALERTS =====
+            document.getElementById('resolveAlertBtn').addEventListener('click', async function() {
+                const selected = document.querySelectorAll('.alert-checkbox:checked');
+                if (selected.length === 0) {
+                    showAlertMsg('Please select at least one alert.', 'error');
+                    return;
+                }
+                for (const cb of selected) {
+                    try {
+                        await fetch(`/api/alerts/${cb.value}/resolve`, { method: 'POST' });
+                    } catch (e) {}
+                }
+                showAlertMsg(`✅ ${selected.length} alert(s) resolved!`, 'success');
+                loadAlerts();
+                refreshDashboard();
+            });
+
+            // ===== DISMISS ALERTS =====
+            document.getElementById('dismissAlertBtn').addEventListener('click', async function() {
+                const selected = document.querySelectorAll('.alert-checkbox:checked');
+                if (selected.length === 0) {
+                    showAlertMsg('Please select at least one alert.', 'error');
+                    return;
+                }
+                for (const cb of selected) {
+                    try {
+                        await fetch(`/api/alerts/${cb.value}/dismiss`, { method: 'POST' });
+                    } catch (e) {}
+                }
+                showAlertMsg(`❌ ${selected.length} alert(s) dismissed!`, 'success');
+                loadAlerts();
+                refreshDashboard();
+            });
+
+            function showAlertMsg(msg, type) {
+                const el = document.getElementById('alertMessage');
+                el.textContent = msg;
+                el.className = 'msg-box ' + type;
+                setTimeout(() => { el.className = 'msg-box'; }, 5000);
+            }
+
+            // ===== FIR FORM =====
+            document.getElementById('firForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const msg = document.getElementById('firMessage');
+                msg.className = 'msg-box';
+                const data = {
+                    fir_no: document.getElementById('firNo').value.trim(),
+                    station_id: document.getElementById('firStation').value,
+                    crime_type_id: document.getElementById('firCrimeType').value,
+                    location_id: document.getElementById('firLocation').value,
+                    reported_by: document.getElementById('firReportedBy').value.trim(),
+                    reporter_cnic: document.getElementById('firReporterCnic').value.trim(),
+                    reporter_phone: document.getElementById('firReporterPhone').value.trim(),
+                    description: document.getElementById('firDescription').value.trim()
+                };
+                if (!data.fir_no || !data.station_id || !data.crime_type_id || !data.location_id || !data.reported_by || !data.description) {
+                    msg.textContent = 'Please fill all required fields.';
+                    msg.className = 'msg-box error';
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/firs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                    const result = await res.json();
+                    if (result.ok) {
+                        msg.textContent = `✅ FIR registered successfully! ID: ${result.id}`;
+                        msg.className = 'msg-box success';
+                        document.getElementById('firForm').reset();
+                        loadFirs();
+                        refreshDashboard();
+                    } else {
+                        msg.textContent = result.error || 'Registration failed.';
+                        msg.className = 'msg-box error';
+                    }
+                } catch (err) {
+                    msg.textContent = 'Network error. Please try again.';
+                    msg.className = 'msg-box error';
+                }
+            });
+
+            // ===== CRIMINAL FORM =====
+            document.getElementById('criminalForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const msg = document.getElementById('criminalMessage');
+                msg.className = 'msg-box';
+                const data = {
+                    criminal_name: document.getElementById('criminalName').value.trim(),
+                    cnic: document.getElementById('criminalCnic').value.trim(),
+                    gender: document.getElementById('criminalGender').value,
+                    date_of_birth: document.getElementById('criminalDob').value,
+                    phone: document.getElementById('criminalPhone').value.trim(),
+                    address: document.getElementById('criminalAddress').value.trim(),
+                    criminal_status: document.getElementById('criminalStatus').value
+                };
+                if (!data.criminal_name) {
+                    msg.textContent = 'Criminal name is required.';
+                    msg.className = 'msg-box error';
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/criminals', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                    const result = await res.json();
+                    if (result.ok) {
+                        msg.textContent = `✅ Criminal added successfully! ID: ${result.id}`;
+                        msg.className = 'msg-box success';
+                        document.getElementById('criminalForm').reset();
+                        loadCriminals();
+                        refreshDashboard();
+                    } else {
+                        msg.textContent = result.error || 'Failed to add criminal.';
+                        msg.className = 'msg-box error';
+                    }
+                } catch (err) {
+                    msg.textContent = 'Network error. Please try again.';
+                    msg.className = 'msg-box error';
+                }
+            });
+
+            // ===== CASE FORM (Supports combined Manual POST/PUT requests) =====
+            document.getElementById('caseForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const msg = document.getElementById('caseMessage');
+                msg.className = 'msg-box';
+                
+                const caseId = document.getElementById('caseIdField').value;
+                const title = document.getElementById('caseTitle').value.trim();
+                const desc = document.getElementById('caseDescription').value.trim();
+                const priority = document.getElementById('casePriority').value;
+                const status = document.getElementById('caseStatus').value;
+                const firId = document.getElementById('caseFir').value;
+                const officerId = document.getElementById('caseOfficer').value;
+                
+                if (!title || !firId) {
+                    msg.textContent = 'Case title and FIR are required.';
+                    msg.className = 'msg-box error';
+                    return;
+                }
+                
+                const payload = { 
+                    case_title: title, 
+                    case_description: desc, 
+                    priority, 
+                    case_status: status, 
+                    fir_id: parseInt(firId) || null, 
+                    officer_id: parseInt(officerId) || null 
+                };
+                
+                let targetUrl = '/api/cases';
+                let httpMethod = 'POST';
+                
+                // If caseId exists, convert request payload to a clean PUT modification call
+                if (caseId) {
+                    payload.case_id = parseInt(caseId);
+                    httpMethod = 'PUT';
+                }
+                
+                try {
+                    const res = await fetch(targetUrl, { 
+                        method: httpMethod, 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify(payload) 
+                    });
+                    const result = await res.json();
+                    if (result.ok) {
+                        msg.textContent = caseId ? '✅ Case modifications updated inside Oracle!' : `✅ Case created successfully! ID: ${result.id}`;
+                        msg.className = 'msg-box success';
+                        document.getElementById('caseForm').reset();
+                        document.getElementById('caseIdField').value = '';
+                        document.getElementById('caseSubmitBtn').textContent = 'Create Case';
+                        document.getElementById('caseResetBtn').classList.add('hidden');
+                        loadCases();
+                        refreshDashboard();
+                    } else {
+                        msg.textContent = result.error || 'Failed to fulfill case processing operation.';
+                        msg.className = 'msg-box error';
+                    }
+                } catch (err) {
+                    msg.textContent = 'Network transaction error. Please try again.';
+                    msg.className = 'msg-box error';
+                }
+            });
+
+            // ===== EVIDENCE FORM =====
+            document.getElementById('evidenceForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const msg = document.getElementById('evidenceMessage');
+                msg.className = 'msg-box';
+                const data = {
+                    case_id: document.getElementById('evidenceCase').value,
+                    evidence_code: document.getElementById('evidenceCode').value.trim(),
+                    evidence_type: document.getElementById('evidenceType').value.trim(),
+                    evidence_description: document.getElementById('evidenceDescription').value.trim(),
+                    storage_location: document.getElementById('evidenceStorage').value.trim()
+                };
+                if (!data.case_id || !data.evidence_code || !data.evidence_type) {
+                    msg.textContent = 'Case, evidence code and type are required.';
+                    msg.className = 'msg-box error';
+                    return;
+                }
+                try {
+                    const res = await fetch('/api/evidence', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                    const result = await res.json();
+                    if (result.ok) {
+                        msg.textContent = `✅ Evidence added successfully! ID: ${result.id}`;
+                        msg.className = 'msg-box success';
+                        document.getElementById('evidenceForm').reset();
+                        loadEvidence();
+                        refreshDashboard();
+                    } else {
+                        msg.textContent = result.error || 'Failed to add evidence.';
+                        msg.className = 'msg-box error';
+                    }
+                } catch (err) {
+                    msg.textContent = 'Network error. Please try again.';
+                    msg.className = 'msg-box error';
+                }
+            });
+
+            // ===== VEHICLE FORM =====
+            document.getElementById('vehicleForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const msg = document.getElementById('vehicleMessage');
+                msg.className = 'msg-box';
+                const number = document.getElementById('vehicleNumber').value.trim();
+                if (!number) {
+                    msg.textContent = 'Vehicle number is required.';
+                    msg.className = 'msg-box error';
+                    return;
+                }
+                const data = {
+                    vehicle_number: number,
+                    owner_name: document.getElementById('vehicleOwner').value.trim(),
+                    owner_cnic: document.getElementById('vehicleOwnerCnic').value.trim(),
+                    vehicle_type: document.getElementById('vehicleType').value.trim(),
+                    color: document.getElementById('vehicleColor').value.trim(),
+                    make: document.getElementById('vehicleMake').value.trim(),
+                    model: document.getElementById('vehicleModel').value.trim()
+                };
+                try {
+                    const res = await fetch('/api/vehicles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                    const result = await res.json();
+                    if (result.ok) {
+                        msg.textContent = `✅ Vehicle added successfully! ID: ${result.id}`;
+                        msg.className = 'msg-box success';
+                        document.getElementById('vehicleForm').reset();
+                        loadVehicles();
+                        refreshDashboard();
+                    } else {
+                        msg.textContent = result.error || 'Failed to add vehicle.';
+                        msg.className = 'msg-box error';
+                    }
+                } catch (err) {
+                    msg.textContent = 'Network error. Please try again.';
+                    msg.className = 'msg-box error';
+                }
+            });
+
+            // ===== MOBILE FORM =====
+            document.getElementById('mobileForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const msg = document.getElementById('mobileMessage');
+                msg.className = 'msg-box';
+                const number = document.getElementById('mobileNumber').value.trim();
+                if (!number) {
+                    msg.textContent = 'Mobile number is required.';
+                    msg.className = 'msg-box error';
+                    return;
+                }
+                const data = {
+                    mobile_number: number,
+                    owner_name: document.getElementById('mobileOwner').value.trim(),
+                    network: document.getElementById('mobileNetwork').value.trim(),
+                    registered_cnic: document.getElementById('mobileCnic').value.trim()
+                };
+                try {
+                    const res = await fetch('/api/mobiles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                    const result = await res.json();
+                    if (result.ok) {
+                        msg.textContent = `✅ Mobile number added successfully! ID: ${result.id}`;
+                        msg.className = 'msg-box success';
+                        document.getElementById('mobileForm').reset();
+                        loadMobiles();
+                        refreshDashboard();
+                    } else {
+                        msg.textContent = result.error || 'Failed to add mobile number.';
+                        msg.className = 'msg-box error';
+                    }
+                } catch (err) {
+                    msg.textContent = 'Network error. Please try again.';
+                    msg.className = 'msg-box error';
+                }
+            });
+
+            // ===== REFRESH DASHBOARD =====
+            async function refreshDashboard() {
+                try {
+                    const res = await fetch('/api/dashboard');
+                    const data = await res.json();
+                    if (data.ok) {
+                        document.getElementById('statFirs').textContent = data.totals?.firs || 0;
+                        document.getElementById('statCases').textContent = data.totals?.active_cases || 0;
+                        document.getElementById('statCriminals').textContent = data.totals?.criminals || 0;
+                        document.getElementById('statEvidence').textContent = data.totals?.evidence || 0;
+                        document.getElementById('statAlerts').textContent = data.totals?.new_alerts || 0;
+                    }
+                } catch (err) { console.error('Refresh error:', err); }
+            }
+
+            // ===== SESSION CHECK =====
+            (async function checkSession() {
+                try {
+                    const res = await fetch('/api/session');
+                    const data = await res.json();
+                    if (data.ok && data.user) {
+                        showDashboard(data.user);
+                    }
+                } catch (_) {}
+            })();
+
+        })();
+    </script>
+
 </body>
 </html>

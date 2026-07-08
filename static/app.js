@@ -8,17 +8,18 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
+// Streamlined 5-Role Module Meta Matrix Maps
 const sectionMeta = {
-    dashboard: { title: "🏠 Dashboard" },
-    firs: { title: "📄 FIRs" },
-    criminals: { title: "👤 Criminals" },
-    cases: { title: "📁 Cases" },
-    evidence: { title: "🔍 Evidence" },
-    vehicles: { title: "🚗 Vehicles" },
-    mobiles: { title: "📱 Mobile Numbers" },
-    alerts: { title: "🚨 Alerts" },
-    reports: { title: "📊 Reports" },
-    admin: { title: "⚙️ Administration" },
+    dashboard: { title: "🏠 Dashboard Overview" },
+    firs: { title: "📄 First Information Reports (FIR)" },
+    criminals: { title: "👤 Criminal Dossiers" },
+    cases: { title: "📁 Case Management Records" },
+    evidence: { title: "🔍 Evidence Locker Records" },
+    vehicles: { title: "🚗 Vehicle Tracking List" },
+    mobiles: { title: "📱 Cellular Intelligence Logs" },
+    alerts: { title: "🚨 Smart System Anomalies" },
+    reports: { title: "📊 Analytical Hotspots & Reports" },
+    admin: { title: "⚙️ Core System Governance" },
 };
 
 const metricIcons = {
@@ -75,7 +76,7 @@ async function api(path, options = {}) {
         const response = await fetch(path, config);
         const data = await response.json();
         if (!response.ok || data.ok === false) {
-            throw new Error(data.error || "Request failed");
+            throw new Error(data.error || "Operation rejected by Oracle engine");
         }
         return data;
     } finally {
@@ -100,7 +101,7 @@ function badge(value) {
 
 function renderTable(target, rows, columns, actions) {
     if (!rows || rows.length === 0) {
-        $(target).innerHTML = `<div class="empty">🔎 No records found.</div>`;
+        $(target).innerHTML = `<div class="empty">🔎 No matching data subsets found inside current schema view.</div>`;
         return;
     }
     const head = columns.map((col) => `<th>${escapeHtml(col.label)}</th>`).join("") + (actions ? "<th>Actions</th>" : "");
@@ -168,7 +169,13 @@ function showApp(user) {
     $("#loginView").classList.add("hidden");
     $("#appView").classList.remove("hidden");
     $("#userBadge").textContent = `${user.full_name} · ${user.username}`;
-    $("#rolePill").textContent = user.role_name;
+    $("#rolePill").textContent = user.role_label || user.role_name;
+
+    // Dynamically filter sidebar modules according to the 5-role privilege matrix
+    $$(".nav-btn").forEach(btn => {
+        const isAllowed = user.modules.includes(btn.dataset.section);
+        btn.classList.toggle("hidden", !isAllowed);
+    });
 }
 
 async function loadLookups() {
@@ -218,6 +225,10 @@ async function loadFirs() {
     const q = encodeURIComponent($("#firSearch").value);
     const status = encodeURIComponent($("#firStatus").value);
     const data = await api(`/api/firs?q=${q}&status=${status}`);
+    
+    // Hide administrative action utilities completely if user is a read-only VIEWER
+    const hasEditRights = state.user.role_name !== "VIEWER";
+
     renderTable("#firsTable", data.rows, [
         { key: "fir_no", label: "FIR No" },
         { key: "reported_by", label: "Reporter" },
@@ -225,26 +236,36 @@ async function loadFirs() {
         { key: "crime_type_name", label: "Crime" },
         { key: "area_name", label: "Location" },
         { key: "fir_status", label: "Status", render: (r) => badge(r.fir_status) },
-    ], (r) => `<button class="mini" onclick="editFir(${r.fir_id})">✏️ Edit</button><button class="mini danger" onclick="archiveFir(${r.fir_id})">🗑️ Archive</button>`);
+    ], hasEditRights ? (r) => `
+        <button class="mini" onclick="editFir(${r.fir_id})">✏️ Edit</button>
+        <button class="mini danger" onclick="archiveFir(${r.fir_id})">🗑️ Archive</button>
+    ` : null);
 }
 
 async function loadCriminals() {
     const q = encodeURIComponent($("#criminalSearch").value);
     const status = encodeURIComponent($("#criminalStatus").value);
     const data = await api(`/api/criminals?q=${q}&status=${status}`);
+    const hasEditRights = state.user.role_name !== "VIEWER";
+
     renderTable("#criminalsTable", data.rows, [
         { key: "criminal_name", label: "Name" },
         { key: "cnic", label: "CNIC" },
         { key: "phone", label: "Phone" },
         { key: "criminal_status", label: "Status", render: (r) => badge(r.criminal_status) },
         { key: "linked_case_count", label: "Cases" },
-    ], (r) => `<button class="mini" onclick="editCriminal(${r.criminal_id})">✏️ Edit</button><button class="mini danger" onclick="clearCriminal(${r.criminal_id})">✅ Clear</button>`);
+    ], hasEditRights ? (r) => `
+        <button class="mini" onclick="editCriminal(${r.criminal_id})">✏️ Edit</button>
+        <button class="mini danger" onclick="clearCriminal(${r.criminal_id})">✅ Clear</button>
+    ` : null);
 }
 
 async function loadCases() {
     const q = encodeURIComponent($("#caseSearch").value);
     const status = encodeURIComponent($("#caseStatus").value);
     const data = await api(`/api/cases?q=${q}&status=${status}`);
+    const hasEditRights = state.user.role_name !== "VIEWER";
+
     renderTable("#casesTable", data.rows, [
         { key: "case_title", label: "Case" },
         { key: "fir_no", label: "FIR" },
@@ -252,16 +273,43 @@ async function loadCases() {
         { key: "officer_name", label: "Officer" },
         { key: "priority", label: "Priority", render: (r) => badge(r.priority) },
         { key: "case_status", label: "Status", render: (r) => badge(r.case_status) },
-    ], (r) => `<button class="mini" onclick="loadCaseDetail(${r.case_id})">📁 Details</button><button class="mini" onclick="openCaseStatus(${r.case_id})">⏳ Status</button><button class="mini danger" onclick="archiveCase(${r.case_id})">🗑️ Archive</button>`);
+    ], (r) => {
+        let actionButtons = `<button class="mini" onclick="loadCaseDetail(${r.case_id})">📁 Details</button>`;
+        if (hasEditRights) {
+            actionButtons += `
+                <button class="mini" onclick="editManualCaseModal(${r.case_id}, '${encodeURIComponent(r.case_title)}', '${r.priority}', '${r.case_status}', '${r.fir_id || ''}', '${r.officer_id || ''}')">✏️ Edit</button>
+                <button class="mini" onclick="openCaseStatus(${r.case_id})">⏳ Status</button>
+                <button class="mini danger" onclick="archiveCase(${r.case_id})">🗑️ Archive</button>
+            `;
+        }
+        return actionButtons;
+    });
 }
+
+// Intercepts and formats manual case parameters for structural PUT revisions
+window.editManualCaseModal = function(id, title, priority, status, firId, officerId) {
+    openModal("✏️ Update Primary Case Record", [
+        { name: "case_title", label: "Case Title", required: true, value: decodeURIComponent(title) },
+        { name: "fir_id", label: "FIR Sequence ID", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title", firId) },
+        { name: "officer_id", label: "Investigation Lead", type: "select", options: optionList(state.lookups.officers, "officer_id", "officer_name", officerId) },
+        { name: "priority", label: "Priority Allocation", type: "select", options: ["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(s => `<option ${s === priority ? "selected" : ""}>${s}</option>`).join("") },
+        { name: "case_status", label: "Operational State", type: "select", options: ["OPEN", "UNDER_INVESTIGATION", "PENDING", "SOLVED", "CLOSED", "ARCHIVED"].map(s => `<option ${s === status ? "selected" : ""}>${s}</option>`).join("") }
+    ], async (data) => {
+        const payload = { case_id: parseInt(id), ...data };
+        await api("/api/cases", { method: "PUT", body: payload });
+        toast("Oracle session case changes committed successfully");
+        closeModal();
+        await loadCases();
+    });
+};
 
 async function loadCaseDetail(caseId) {
     const data = await api(`/api/cases/${caseId}`);
     const c = data.case;
     $("#caseDetail").classList.remove("hidden");
-    $("#caseDetail").innerHTML = `
-        <h3>${escapeHtml(c.case_title)} ${badge(c.case_status)}</h3>
-        <p>${escapeHtml(c.fir_description || c.case_description)}</p>
+    
+    const isViewer = state.user.role_name === "VIEWER";
+    const toolbarHtml = isViewer ? "" : `
         <div class="toolbar">
             <button class="primary" onclick="openAssignOfficer(${caseId})">👮 Assign Officer</button>
             <button class="ghost" onclick="openSuspect(${caseId})">👤 Link Suspect</button>
@@ -269,22 +317,27 @@ async function loadCaseDetail(caseId) {
             <button class="ghost" onclick="openWitness(${caseId})">➕ Add Witness</button>
             <button class="ghost" onclick="openCaseEvidence(${caseId})">🔍 Add Evidence</button>
             <button class="ghost" onclick="openCaseLog(${caseId})">📝 Add Log</button>
-        </div>
+        </div>`;
+
+    $("#caseDetail").innerHTML = `
+        <h3>${escapeHtml(c.case_title)} ${badge(c.case_status)}</h3>
+        <p style="margin-top: 6px; margin-bottom: 12px;">${escapeHtml(c.fir_description || c.case_description)}</p>
+        ${toolbarHtml}
         <div class="detail-grid">
             ${detailList("👤 Suspects", data.suspects, ["criminal_name", "suspect_role", "involvement_status"])}
             ${detailList("🧾 Victims", data.victims, ["victim_name", "phone", "injury_details"])}
             ${detailList("👁️ Witnesses", data.witnesses, ["witness_name", "phone", "statement_summary"])}
-            ${detailList("🔍 Evidence", data.evidence, ["evidence_code", "evidence_type", "verification_status"])}
-            ${detailList("🚗 Vehicles", data.vehicles, ["vehicle_number", "relation_to_case", "suspicious_status"])}
-            ${detailList("📱 Mobile Numbers", data.mobiles, ["mobile_number", "relation_to_case", "suspicious_status"])}
-            ${detailList("📝 Investigation Logs", data.logs, ["officer_name", "progress_note", "next_action"])}
-            ${detailList("⏳ Status History", data.history, ["old_status", "new_status", "remarks"])}
+            ${detailList("🔍 Evidence Locker", data.evidence, ["evidence_code", "evidence_type", "verification_status"])}
+            ${detailList("🚗 Linked Vehicles", data.vehicles, ["vehicle_number", "relation_to_case", "suspicious_status"])}
+            ${detailList("📱 Intercept Mobile Logs", data.mobiles, ["mobile_number", "relation_to_case", "suspicious_status"])}
+            ${detailList("📝 Progress Timelines", data.logs, ["officer_name", "progress_note", "next_action"])}
+            ${detailList("⏳ Status Logs", data.history, ["old_status", "new_status", "remarks"])}
         </div>
     `;
 }
 
 function detailList(title, rows, keys) {
-    const content = rows.length ? rows.map((row) => `<li>${keys.map((key) => escapeHtml(row[key])).filter(Boolean).join(" · ")}</li>`).join("") : "<li>🔎 No records.</li>";
+    const content = rows && rows.length ? rows.map((row) => `<li>${keys.map((key) => escapeHtml(row[key])).filter(Boolean).join(" · ")}</li>`).join("") : "<li>🔎 No related entity maps found.</li>";
     return `<div class="detail-card"><h3>${title}</h3><ul>${content}</ul></div>`;
 }
 
@@ -292,18 +345,25 @@ async function loadEvidence() {
     const q = encodeURIComponent($("#evidenceSearch").value);
     const status = encodeURIComponent($("#evidenceStatus").value);
     const data = await api(`/api/evidence?q=${q}&verification_status=${status}`);
+    const hasEditRights = state.user.role_name !== "VIEWER";
+
     renderTable("#evidenceTable", data.rows, [
         { key: "evidence_code", label: "Code" },
         { key: "case_title", label: "Case" },
         { key: "evidence_type", label: "Type" },
         { key: "storage_location", label: "Storage" },
         { key: "verification_status", label: "Status", render: (r) => badge(r.verification_status) },
-    ], (r) => `<button class="mini" onclick="verifyEvidence(${r.evidence_id}, 'VERIFIED')">✅ Verify</button><button class="mini danger" onclick="archiveEvidence(${r.evidence_id})">🗑️ Archive</button>`);
+    ], hasEditRights ? (r) => `
+        <button class="mini" onclick="verifyEvidence(${r.evidence_id}, 'VERIFIED')">✅ Verify</button>
+        <button class="mini danger" onclick="archiveEvidence(${r.evidence_id})">🗑️ Archive</button>
+    ` : null);
 }
 
 async function loadVehicles() {
     const q = encodeURIComponent($("#vehicleSearch").value);
     const data = await api(`/api/vehicles?q=${q}`);
+    const hasEditRights = state.user.role_name !== "VIEWER";
+
     renderTable("#vehiclesTable", data.rows, [
         { key: "vehicle_number", label: "Number" },
         { key: "owner_name", label: "Owner" },
@@ -311,12 +371,14 @@ async function loadVehicles() {
         { key: "model", label: "Model" },
         { key: "linked_case_count", label: "Cases" },
         { key: "suspicious_status", label: "Status", render: (r) => badge(r.suspicious_status) },
-    ], (r) => `<button class="mini" onclick="openVehicleLink(${r.vehicle_id})">🔗 Link</button>`);
+    ], hasEditRights ? (r) => `<button class="mini" onclick="openVehicleLink(${r.vehicle_id})">🔗 Link</button>` : null);
 }
 
 async function loadMobiles() {
     const q = encodeURIComponent($("#mobileSearch").value);
     const data = await api(`/api/mobiles?q=${q}`);
+    const hasEditRights = state.user.role_name !== "VIEWER";
+
     renderTable("#mobilesTable", data.rows, [
         { key: "mobile_number", label: "Number" },
         { key: "owner_name", label: "Owner" },
@@ -324,32 +386,38 @@ async function loadMobiles() {
         { key: "registered_cnic", label: "CNIC" },
         { key: "linked_case_count", label: "Cases" },
         { key: "suspicious_status", label: "Status", render: (r) => badge(r.suspicious_status) },
-    ], (r) => `<button class="mini" onclick="openMobileLink(${r.mobile_id})">🔗 Link</button>`);
+    ], hasEditRights ? (r) => `<button class="mini" onclick="openMobileLink(${r.mobile_id})">🔗 Link</button>` : null);
 }
 
 async function loadAlerts() {
     const status = encodeURIComponent($("#alertStatus").value);
     const data = await api(`/api/alerts?status=${status}`);
+    const hasEditRights = state.user.role_name !== "VIEWER";
+
     renderTable("#alertsTable", data.rows, [
         { key: "alert_type", label: "Type" },
         { key: "alert_message", label: "Message" },
         { key: "case_title", label: "Case" },
         { key: "alert_status", label: "Status", render: (r) => badge(r.alert_status) },
-    ], (r) => `<button class="mini" onclick="alertAction(${r.alert_id}, 'review')">🔎 Review</button><button class="mini" onclick="alertAction(${r.alert_id}, 'resolve')">✅ Resolve</button><button class="mini danger" onclick="alertAction(${r.alert_id}, 'dismiss')">🗑️ Dismiss</button>`);
+    ], hasEditRights ? (r) => `
+        <button class="mini" onclick="alertAction(${r.alert_id}, 'review')">🔎 Review</button>
+        <button class="mini" onclick="alertAction(${r.alert_id}, 'resolve')">✅ Resolve</button>
+        <button class="mini danger" onclick="alertAction(${r.alert_id}, 'dismiss')">🗑️ Dismiss</button>
+    ` : null);
 }
 
 async function loadReports() {
     const data = await api("/api/reports");
     $("#reportsGrid").innerHTML = Object.entries(data.reports).map(([name, rows]) => `
         <article class="panel">
-            <h3>📊 ${name.replaceAll("_", " ")}</h3>
+            <h3>📊 ${name.replaceAll("_", " ").toUpperCase()}</h3>
             <div>${reportPreview(rows)}</div>
         </article>
     `).join("");
 }
 
 function reportPreview(rows) {
-    if (!rows || rows.length === 0) return `<div class="empty">🔎 No report rows.</div>`;
+    if (!rows || rows.length === 0) return `<div class="empty">🔎 No operational matrix profiles loaded.</div>`;
     const keys = Object.keys(rows[0]).slice(0, 4);
     return `<table><thead><tr>${keys.map((key) => `<th>${key}</th>`).join("")}</tr></thead><tbody>${rows.slice(0, 6).map((row) => `<tr>${keys.map((key) => `<td>${escapeHtml(row[key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
@@ -357,14 +425,14 @@ function reportPreview(rows) {
 async function loadAdmin() {
     const data = await api("/api/admin");
     $("#adminPanel").innerHTML = `
-        <article class="panel"><h3>👥 Users</h3>${smallTable(data.users, ["username", "full_name", "role_name", "status"])}</article>
-        <article class="panel"><h3>🏢 Stations</h3>${smallTable(data.stations, ["station_name", "city", "status"])}</article>
-        <article class="panel"><h3>🧾 Recent Audit Logs</h3>${smallTable(data.audit_logs, ["table_name", "record_id", "operation_type", "changed_at"])}</article>
+        <article class="panel"><h3>👥 System User Roster</h3>${smallTable(data.users, ["username", "full_name", "role_name", "status"])}</article>
+        <article class="panel"><h3>🏢 Station Configuration Grid</h3>${smallTable(data.stations, ["station_name", "city", "status"])}</article>
+        <article class="panel"><h3>🧾 Oracle Security Audit Logs</h3>${smallTable(data.audit_logs, ["table_name", "record_id", "operation_type", "changed_at"])}</article>
     `;
 }
 
 function smallTable(rows, keys) {
-    if (!rows || rows.length === 0) return `<div class="empty">🔎 No records.</div>`;
+    if (!rows || rows.length === 0) return `<div class="empty">🔎 No log indices registered.</div>`;
     return `<table><thead><tr>${keys.map((key) => `<th>${key}</th>`).join("")}</tr></thead><tbody>${rows.slice(0, 10).map((row) => `<tr>${keys.map((key) => `<td>${escapeHtml(row[key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
@@ -387,23 +455,27 @@ async function showSection(name) {
     $$(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.section === name));
     $("#sectionTitle").textContent = sectionMeta[name]?.title || name.replace(/\b\w/g, (c) => c.toUpperCase());
     $("#sidebar").classList.remove("open");
+    
+    // Clear details if leaving the cases frame view
+    if (name !== 'cases') $("#caseDetail").classList.add("hidden");
+
     await sectionLoaders[name]();
 }
 
 function openFirForm() {
-    openModal("📄 Register FIR", [
+    openModal("📄 Register Core Complaint File (FIR)", [
         { name: "fir_no", label: "FIR Number", required: true },
-        { name: "station_id", label: "Station", type: "select", required: true, options: optionList(state.lookups.stations, "station_id", "station_name") },
-        { name: "crime_type_id", label: "Crime Type", type: "select", required: true, options: optionList(state.lookups.crime_types, "crime_type_id", "crime_type_name") },
-        { name: "location_id", label: "Location", type: "select", required: true, options: optionList(state.lookups.locations, "location_id", "area_name") },
-        { name: "reported_by", label: "Reported By", required: true },
-        { name: "reporter_cnic", label: "Reporter CNIC" },
-        { name: "reporter_phone", label: "Reporter Phone" },
-        { name: "incident_at", label: "Incident Date/Time", type: "datetime-local" },
-        { name: "description", label: "Description", type: "textarea", required: true },
+        { name: "station_id", label: "Station Profile", type: "select", required: true, options: optionList(state.lookups.stations, "station_id", "station_name") },
+        { name: "crime_type_id", label: "Classification", type: "select", required: true, options: optionList(state.lookups.crime_types, "crime_type_id", "crime_type_name") },
+        { name: "location_id", label: "Crime Scene Radius Location", type: "select", required: true, options: optionList(state.lookups.locations, "location_id", "area_name") },
+        { name: "reported_by", label: "Complainant Full Name", required: true },
+        { name: "reporter_cnic", label: "Complainant Identity (CNIC)" },
+        { name: "reporter_phone", label: "Complainant Cellular Connection" },
+        { name: "incident_at", label: "Incident Timestamp", type: "datetime-local" },
+        { name: "description", label: "Incident Narrative & Statements", type: "textarea", required: true },
     ], async (data) => {
         await api("/api/firs", { method: "POST", body: data });
-        toast("FIR registered and case created");
+        toast("FIR saved successfully into secure Oracle cluster log matrices");
         closeModal();
         await loadFirs();
         await loadLookups();
@@ -411,18 +483,18 @@ function openFirForm() {
 }
 
 function openCriminalForm() {
-    openModal("👤 Add Criminal", [
-        { name: "criminal_name", label: "Name", required: true },
-        { name: "cnic", label: "CNIC" },
+    openModal("👤 Create Criminal Profile Dossier", [
+        { name: "criminal_name", label: "Full Name", required: true },
+        { name: "cnic", label: "Identity Grid Card (CNIC)" },
         { name: "gender", label: "Gender" },
         { name: "date_of_birth", label: "Date of Birth", type: "date" },
-        { name: "phone", label: "Phone" },
-        { name: "criminal_status", label: "Status", type: "select", options: ["SUSPECT", "WANTED", "ARRESTED", "CONVICTED", "RELEASED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
-        { name: "address", label: "Address", type: "textarea" },
-        { name: "previous_record", label: "Previous Record", type: "textarea" },
+        { name: "phone", label: "Contact Trace Number" },
+        { name: "criminal_status", label: "Classification Status", type: "select", options: ["SUSPECT", "WANTED", "ARRESTED", "CONVICTED", "RELEASED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
+        { name: "address", label: "Known Residence Address", type: "textarea" },
+        { name: "previous_record", label: "Historical Crime Roster Profiles", type: "textarea" },
     ], async (data) => {
         await api("/api/criminals", { method: "POST", body: data });
-        toast("Criminal added");
+        toast("Dossier entry initialized");
         closeModal();
         await loadCriminals();
         await loadLookups();
@@ -430,16 +502,16 @@ function openCriminalForm() {
 }
 
 function openEvidenceForm(caseId = "") {
-    openModal("🔍 Add Evidence", [
-        { name: "case_id", label: "Case", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title", caseId) },
-        { name: "evidence_code", label: "Evidence Code", required: true },
-        { name: "evidence_type", label: "Evidence Type", required: true },
-        { name: "collected_by", label: "Collected By", type: "select", options: optionList(state.lookups.officers, "officer_id", "officer_name") },
-        { name: "storage_location", label: "Storage Location" },
-        { name: "evidence_description", label: "Description", type: "textarea" },
+    openModal("🔍 Authenticate & Log Physical/Digital Evidence", [
+        { name: "case_id", label: "Target Case Profile Linkage", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title", caseId) },
+        { name: "evidence_code", label: "Evidence Tracking Identifier Code", required: true },
+        { name: "evidence_type", label: "Classification Format Group", required: true },
+        { name: "collected_by", label: "Recovering Agent (Officer ID)", type: "select", options: optionList(state.lookups.officers, "officer_id", "officer_name") },
+        { name: "storage_location", label: "Secure Vault Storage Locker Unit" },
+        { name: "evidence_description", label: "Recovery Summary Description Details", type: "textarea" },
     ], async (data) => {
         await api("/api/evidence", { method: "POST", body: data });
-        toast("Evidence added");
+        toast("Evidence profile logged successfully");
         closeModal();
         await loadEvidence();
         if (caseId) await loadCaseDetail(caseId);
@@ -447,42 +519,42 @@ function openEvidenceForm(caseId = "") {
 }
 
 function openVehicleForm() {
-    openModal("🚗 Add Vehicle", [
-        { name: "vehicle_number", label: "Registration Number", required: true },
-        { name: "owner_name", label: "Owner" },
-        { name: "owner_cnic", label: "Owner CNIC" },
-        { name: "vehicle_type", label: "Vehicle Type" },
-        { name: "make", label: "Make" },
-        { name: "model", label: "Model" },
-        { name: "color", label: "Color" },
+    openModal("🚗 Log Motorized Tracking Vehicle Profile", [
+        { name: "vehicle_number", label: "License Registration Grid Code", required: true },
+        { name: "owner_name", label: "Registered Owner Name" },
+        { name: "owner_cnic", label: "Owner Identity (CNIC)" },
+        { name: "vehicle_type", label: "Body Architecture Configuration" },
+        { name: "make", label: "Manufacturing Brand Brand" },
+        { name: "model", label: "Production Line Variant Model" },
+        { name: "color", label: "Vehicle Primary Tone Tint" },
     ], async (data) => {
         await api("/api/vehicles", { method: "POST", body: data });
-        toast("Vehicle added");
+        toast("Tracking vehicle added successfully");
         closeModal();
         await loadVehicles();
     });
 }
 
 function openMobileForm() {
-    openModal("📱 Add Mobile Number", [
-        { name: "mobile_number", label: "Mobile Number", required: true },
-        { name: "owner_name", label: "Owner" },
-        { name: "network", label: "Network" },
-        { name: "registered_cnic", label: "Registered CNIC" },
+    openModal("📱 Track Network Cellular Line Node", [
+        { name: "mobile_number", label: "Cellular Connection String Number", required: true },
+        { name: "owner_name", label: "Registered SIM User" },
+        { name: "network", label: "Service Provider Network Carrier" },
+        { name: "registered_cnic", label: "Identity Linkage (CNIC)" },
     ], async (data) => {
         await api("/api/mobiles", { method: "POST", body: data });
-        toast("Mobile number added");
+        toast("Network tracking item mapped correctly");
         closeModal();
         await loadMobiles();
     });
 }
 
 function openAssignOfficer(caseId) {
-    openModal("👮 Assign Officer", [
-        { name: "officer_id", label: "Officer", type: "select", required: true, options: optionList(state.lookups.officers, "officer_id", "officer_name") },
+    openModal("👮 Assign Case Lead Officer", [
+        { name: "officer_id", label: "Select Lead Officer Agent", type: "select", required: true, options: optionList(state.lookups.officers, "officer_id", "officer_name") },
     ], async (data) => {
         await api(`/api/cases/${caseId}/assign-officer`, { method: "POST", body: data });
-        toast("Officer assigned");
+        toast("Case assignment finalized inside relational constraints");
         closeModal();
         await loadCaseDetail(caseId);
         await loadCases();
@@ -490,68 +562,69 @@ function openAssignOfficer(caseId) {
 }
 
 function openCaseStatus(caseId) {
-    openModal("⏳ Update Case Status", [
-        { name: "case_status", label: "Status", type: "select", required: true, options: ["OPEN", "UNDER_INVESTIGATION", "PENDING", "SOLVED", "CLOSED", "ARCHIVED"].map((s) => `<option>${s}</option>`).join("") },
-        { name: "remarks", label: "Remarks", type: "textarea" },
+    openModal("⏳ Transition Operational Case State", [
+        { name: "case_status", label: "Target State", type: "select", required: true, options: ["OPEN", "UNDER_INVESTIGATION", "PENDING", "SOLVED", "CLOSED", "ARCHIVED"].map((s) => `<option>${s}</option>`).join("") },
+        { name: "remarks", label: "State Change Progress Log Entry", type: "textarea", required: true },
     ], async (data) => {
         await api(`/api/cases/${caseId}/status`, { method: "POST", body: data });
-        toast("Case status updated");
+        toast("Case tracking parameter records shifted cleanly");
         closeModal();
         await loadCases();
+        if (state.currentSection === 'cases' && !$("#caseDetail").classList.contains("hidden")) await loadCaseDetail(caseId);
     });
 }
 
 function openSuspect(caseId) {
-    openModal("👤 Link Suspect", [
-        { name: "criminal_id", label: "Criminal", type: "select", required: true, options: optionList(state.lookups.criminals, "criminal_id", "criminal_name") },
-        { name: "suspect_role", label: "Role" },
-        { name: "involvement_status", label: "Involvement Status" },
+    openModal("👤 Bind Known Profile Suspect Node", [
+        { name: "criminal_id", label: "Target Database Subject", type: "select", required: true, options: optionList(state.lookups.criminals, "criminal_id", "criminal_name") },
+        { name: "suspect_role", label: "Alleged Involvement Classification" },
+        { name: "involvement_status", label: "Current Interrogation Assessment Status" },
     ], async (data) => {
         await api(`/api/cases/${caseId}/suspects`, { method: "POST", body: data });
-        toast("Suspect linked");
+        toast("Relational binding index committed");
         closeModal();
         await loadCaseDetail(caseId);
     });
 }
 
 function openVictim(caseId) {
-    openModal("🧾 Add Victim", [
-        { name: "victim_name", label: "Name", required: true },
-        { name: "cnic", label: "CNIC" },
+    openModal("🧾 Document Case Victim Information", [
+        { name: "victim_name", label: "Victim Full Name", required: true },
+        { name: "cnic", label: "Identity Card Code Number (CNIC)" },
         { name: "gender", label: "Gender" },
-        { name: "phone", label: "Phone" },
-        { name: "address", label: "Address", type: "textarea" },
-        { name: "injury_details", label: "Injury Details", type: "textarea" },
+        { name: "phone", label: "Cellular Contact Point" },
+        { name: "address", label: "Residence Address", type: "textarea" },
+        { name: "injury_details", label: "Physical Trauma Summaries & Remarks", type: "textarea" },
     ], async (data) => {
         await api(`/api/cases/${caseId}/victims`, { method: "POST", body: data });
-        toast("Victim added");
+        toast("Victim folder profile cached");
         closeModal();
         await loadCaseDetail(caseId);
     });
 }
 
 function openWitness(caseId) {
-    openModal("👁️ Add Witness", [
-        { name: "witness_name", label: "Name", required: true },
-        { name: "cnic", label: "CNIC" },
-        { name: "phone", label: "Phone" },
-        { name: "statement_summary", label: "Statement Summary", type: "textarea" },
+    openModal("👁️ Bind Witness Sworn Statement Profile", [
+        { name: "witness_name", label: "Witness Full Name", required: true },
+        { name: "cnic", label: "Witness Identity Card (CNIC)" },
+        { name: "phone", label: "Witness Cellular Grid String" },
+        { name: "statement_summary", label: "Sworn Account Core Deposition Statement", type: "textarea", required: true },
     ], async (data) => {
         await api(`/api/cases/${caseId}/witnesses`, { method: "POST", body: data });
-        toast("Witness added");
+        toast("Witness folder statement added");
         closeModal();
         await loadCaseDetail(caseId);
     });
 }
 
 function openCaseLog(caseId) {
-    openModal("📝 Add Investigation Log", [
-        { name: "officer_id", label: "Officer", type: "select", options: optionList(state.lookups.officers, "officer_id", "officer_name") },
-        { name: "progress_note", label: "Progress Note", type: "textarea", required: true },
-        { name: "next_action", label: "Next Action", type: "textarea" },
+    openModal("📝 Append Investigation Log Progression Note", [
+        { name: "officer_id", label: "Logging Personnel Agent", type: "select", options: optionList(state.lookups.officers, "officer_id", "officer_name") },
+        { name: "progress_note", label: "Activity Log Progression Core Entry", type: "textarea", required: true },
+        { name: "next_action", label: "Planned Target Milestone Action Plan", type: "textarea" },
     ], async (data) => {
         await api(`/api/cases/${caseId}/logs`, { method: "POST", body: data });
-        toast("Log added");
+        toast("Case milestone ledger entry appended successfully");
         closeModal();
         await loadCaseDetail(caseId);
     });
@@ -562,103 +635,126 @@ function openCaseEvidence(caseId) {
 }
 
 function openVehicleLink(vehicleId) {
-    openModal("🚗 Link Vehicle to Case", [
-        { name: "case_id", label: "Case", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title") },
-        { name: "detected_location", label: "Detected Location" },
-        { name: "relation_to_case", label: "Relation" },
-        { name: "suspicious_status", label: "Status", type: "select", options: ["NORMAL", "SUSPICIOUS", "REPEATED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
+    openModal("🚗 Map Tracking Vehicle To Active File", [
+        { name: "case_id", label: "Target Case Association Profile", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title") },
+        { name: "detected_location", label: "Detection / Capture Radius Location" },
+        { name: "relation_to_case", label: "Contextual Relation Assignment" },
+        { name: "suspicious_status", label: "Anomalous Severity Flag Level", type: "select", options: ["NORMAL", "SUSPICIOUS", "REPEATED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
     ], async (data) => {
         await api(`/api/vehicles/${vehicleId}/link`, { method: "POST", body: data });
-        toast("Vehicle linked");
+        toast("Relational model linkage completed smoothly");
         closeModal();
         await loadVehicles();
     });
 }
 
 function openMobileLink(mobileId) {
-    openModal("📱 Link Mobile to Case", [
-        { name: "case_id", label: "Case", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title") },
-        { name: "linked_person", label: "Linked Person" },
-        { name: "relation_to_case", label: "Relation" },
-        { name: "suspicious_status", label: "Status", type: "select", options: ["NORMAL", "SUSPICIOUS", "REPEATED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
+    openModal("📱 Link Network Target Line To Case Matrix", [
+        { name: "case_id", label: "Target Active File Profile", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title") },
+        { name: "linked_person", label: "Identified Account User / Node Holder" },
+        { name: "relation_to_case", label: "Intelligence Context Relation" },
+        { name: "suspicious_status", label: "Flag Target Parameter State", type: "select", options: ["NORMAL", "SUSPICIOUS", "REPEATED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
     ], async (data) => {
         await api(`/api/mobiles/${mobileId}/link`, { method: "POST", body: data });
-        toast("Mobile linked");
+        toast("Cellular intelligence relationship linkage initialized");
         closeModal();
         await loadMobiles();
     });
 }
 
 async function editFir(id) {
-    openModal("✏️ Update FIR", [
-        { name: "reported_by", label: "Reported By" },
-        { name: "reporter_phone", label: "Reporter Phone" },
-        { name: "fir_status", label: "Status", type: "select", options: ["REGISTERED", "VERIFIED", "REJECTED", "ARCHIVED"].map((s) => `<option>${s}</option>`).join("") },
-        { name: "description", label: "Description", type: "textarea" },
+    openModal("✏️ Modify Core Complaint Parameter Sets (FIR)", [
+        { name: "reported_by", label: "Complainant Full Name" },
+        { name: "reporter_phone", label: "Complainant Contact Node Line" },
+        { name: "fir_status", label: "Current Core State", type: "select", options: ["REGISTERED", "VERIFIED", "REJECTED", "ARCHIVED"].map((s) => `<option>${s}</option>`).join("") },
+        { name: "description", label: "Core Narrative & Summary Index", type: "textarea" },
     ], async (data) => {
         await api(`/api/firs/${id}`, { method: "PUT", body: data });
-        toast("FIR updated");
+        toast("FIR log edits committed into Oracle");
         closeModal();
         await loadFirs();
     });
 }
 
 function editCriminal(id) {
-    openModal("✏️ Update Criminal", [
-        { name: "criminal_name", label: "Name" },
-        { name: "phone", label: "Phone" },
-        { name: "criminal_status", label: "Status", type: "select", options: ["SUSPECT", "WANTED", "ARRESTED", "CONVICTED", "RELEASED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
-        { name: "previous_record", label: "Previous Record", type: "textarea" },
+    openModal("✏️ Update Criminal Subject Dossier Records", [
+        { name: "criminal_name", label: "Full Profile Name" },
+        { name: "phone", label: "Contact Tracking Number String" },
+        { name: "criminal_status", label: "Current Judicial Status Classification", type: "select", options: ["SUSPECT", "WANTED", "ARRESTED", "CONVICTED", "RELEASED", "CLEARED"].map((s) => `<option>${s}</option>`).join("") },
+        { name: "previous_record", label: "Historical Offense Logs & Summaries", type: "textarea" },
     ], async (data) => {
         await api(`/api/criminals/${id}`, { method: "PUT", body: data });
-        toast("Criminal updated");
+        toast("Dossier profile matrix synchronized cleanly");
         closeModal();
         await loadCriminals();
     });
 }
 
 function archiveFir(id) {
-    confirmAction("Archive this FIR?", async () => {
+    confirmAction("Archive this FIR document entirely? This will flag it in your Oracle engine tables.", async () => {
         await api(`/api/firs/${id}`, { method: "DELETE" });
-        toast("FIR archived");
+        toast("FIR data archived safely");
         await loadFirs();
     });
 }
 
 function clearCriminal(id) {
-    confirmAction("Mark this criminal record as cleared?", async () => {
+    confirmAction("Mark this subject record as cleared from active operational watch lists?", async () => {
         await api(`/api/criminals/${id}`, { method: "DELETE" });
-        toast("Criminal marked cleared");
+        toast("Subject cleared from watch frames");
         await loadCriminals();
     });
 }
 
 function archiveCase(id) {
-    confirmAction("Archive this case?", async () => {
+    confirmAction("Archive this entire case file record stream?", async () => {
         await api(`/api/cases/${id}`, { method: "DELETE" });
-        toast("Case archived");
+        toast("Case data archived cleanly");
         await loadCases();
+        $("#caseDetail").classList.add("hidden");
     });
 }
 
 function archiveEvidence(id) {
-    confirmAction("Archive this evidence record?", async () => {
+    confirmAction("Archive this evidence room locker record tracking parameter?", async () => {
         await api(`/api/evidence/${id}`, { method: "DELETE" });
-        toast("Evidence archived");
+        toast("Locker logging unit status updated to archived");
         await loadEvidence();
     });
 }
 
 async function verifyEvidence(id, status) {
     await api(`/api/evidence/${id}`, { method: "PUT", body: { verification_status: status } });
-    toast("Evidence status updated");
+    toast("Evidence room verification signature logged");
     await loadEvidence();
 }
 
 async function alertAction(id, action) {
     await api(`/api/alerts/${id}/${action}`, { method: "POST" });
-    toast("Alert updated");
+    toast("System automated tracking anomaly log updated");
     await loadAlerts();
+}
+
+// Custom manual initialization layout engine for adding completely new files
+function openManualCaseCreationForm() {
+    openModal("➕ Compile New Manual Case File Dossier", [
+        { name: "case_title", label: "Case Profile Title", required: true },
+        { name: "case_description", label: "Core Description & Briefing Summary", type: "textarea", required: true },
+        { name: "fir_id", label: "Reference Parent FIR Record Tracking Identification", type: "select", required: true, options: optionList(state.lookups.cases, "case_id", "case_title") },
+        { name: "officer_id", label: "Assign Primary Field Investigator Agent", type: "select", options: optionList(state.lookups.officers, "officer_id", "officer_name") },
+        { name: "priority", label: "Initial Priority Allocation", type: "select", options: ["LOW", "MEDIUM", "HIGH", "CRITICAL"].map(s => `<option>${s}</option>`).join("") },
+        { name: "case_status", label: "Initial Investigation Status File State", type: "select", options: ["OPEN", "UNDER_INVESTIGATION", "PENDING"].map(s => `<option>${s}</option>`).join("") }
+    ], async (data) => {
+        const processedData = {
+            ...data,
+            fir_id: parseInt(data.fir_id) || null,
+            officer_id: parseInt(data.officer_id) || null
+        };
+        await api("/api/cases", { method: "POST", body: processedData });
+        toast("Relational manual case file profile mapped successfully into Oracle");
+        closeModal();
+        await loadCases();
+    });
 }
 
 function bindEvents() {
@@ -706,6 +802,7 @@ function bindEvents() {
         if (form === "evidence") openEvidenceForm();
         if (form === "vehicle") openVehicleForm();
         if (form === "mobile") openMobileForm();
+        if (form === "case") openManualCaseCreationForm(); // Dynamic routing endpoint logic wire-up
     }));
     $("#loadReports").addEventListener("click", () => loadReports().catch((err) => toast(err.message, "error")));
     $("#exportReports").addEventListener("click", () => { window.location.href = "/api/reports/export"; });

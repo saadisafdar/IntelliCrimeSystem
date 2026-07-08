@@ -3,18 +3,21 @@ PROMPT IntelliCrime System database setup
 PROMPT WARNING: Running setup.sql again resets all IntelliCrime demo data.
 PROMPT ============================================================
 
-ALTER SESSION SET CONTAINER = XEPDB1;
+-- Bypasses the strict CDB/PDB container rules so the script runs smoothly 
+-- on standard local development setups without needing a specific PDB.
+ALTER SESSION SET "_ORACLE_SCRIPT"=true;
 
 DECLARE
     v_count NUMBER;
 BEGIN
     SELECT COUNT(*) INTO v_count FROM dba_users WHERE username = 'INTELLICRIME';
     IF v_count = 0 THEN
-        EXECUTE IMMEDIATE 'CREATE USER intellicrime IDENTIFIED BY intellicrime123 DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP';
+        EXECUTE IMMEDIATE 'CREATE USER intellicrime IDENTIFIED BY intellicrime123 DEFAULT TABLESPACE USERS';
     ELSE
         EXECUTE IMMEDIATE 'ALTER USER intellicrime IDENTIFIED BY intellicrime123 ACCOUNT UNLOCK';
     END IF;
-    EXECUTE IMMEDIATE 'ALTER USER intellicrime QUOTA 100M ON USERS';
+    -- Keeps tablespace allocation operational without forcing a restrictive temp block
+    EXECUTE IMMEDIATE 'ALTER USER intellicrime QUOTA UNLIMITED ON USERS';
 END;
 /
 

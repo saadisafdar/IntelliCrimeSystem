@@ -1,46 +1,88 @@
 # IntelliCrime System
 
-IntelliCrime System is a university ADBMS semester project for smart crime investigation and criminal record management.
+IntelliCrime System is the current production-ready implementation of a crime investigation and case management platform built with Flask, Oracle Database, and a lightweight web frontend.
 
-The workflow is simple: HTML, CSS, and vanilla JavaScript render the interface, JavaScript sends JSON requests to Flask, Flask validates input and runs parameterized Oracle SQL or PL/SQL, Oracle stores the data, and Flask commits or rolls back before returning JSON.
+## 3-Tier Architecture
 
-## Required Software
+1. Presentation Layer
+   - HTML templates in the templates folder
+   - Static assets in the static folder
+   - Vanilla JavaScript handles UI interaction and API calls
 
-- Python 3.10 or newer
-- Oracle Database XE with XEPDB1
-- Oracle SQL Developer
+2. Application Layer
+   - The main Flask entrypoint is app.py
+   - Session-based authentication and role-based access control are implemented in the backend
+   - Case management, evidence handling, and report export logic run through Flask routes
 
-## Database Setup
+3. Data Layer
+   - Oracle Database stores users, roles, FIRs, cases, criminals, evidence, vehicle and mobile information, audit logs, and historical status data
+   - The schema is initialized through setup.sql
+   - Automated triggers and the INTELLICRIME_PKG package provide event-driven case creation, status tracking, and audit support
 
-1. Open Oracle SQL Developer.
-2. Connect as `SYSTEM` to `localhost:1521/XEPDB1`.
-3. Open `setup.sql`.
-4. Press `F5` / Run Script.
-5. Wait for the verification row counts.
+## Current Core Files
 
-Running `setup.sql` again resets all IntelliCrime demo data.
+- app.py: final production backend with the 5-role RBAC matrix and CSV export endpoint
+- setup.sql: complete database initialization script with the 3NF schema, triggers, package, and seed data
+- templates/index.html: main UI shell
+- static/app.js: frontend logic for dashboard and CRUD interaction
+- static/style.css: styling for the application
+- requirements.txt: Python dependencies
+- run.bat: Windows launcher for the Flask app
 
-## Start Application
+## Repository Structure
 
-Double-click `run.bat`, then open:
+```text
+IntelliCrimeSystem/
+├─ app.py
+├─ setup.sql
+├─ requirements.txt
+├─ run.bat
+├─ README.md
+├─ .env.example
+├─ static/
+│  ├─ app.js
+│  ├─ style.css
+│  └─ ...
+├─ templates/
+│  └─ index.html
+└─ venv/
+```
 
+## Setup Instructions
+
+### 1. Prerequisites
+- Python 3.10+
+- Oracle Database XE or a compatible local Oracle instance
+- Oracle SQL Developer or any Oracle SQL client
+
+### 2. Python Environment
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+### 3. Database Setup
+1. Connect to Oracle as SYSTEM or a DBA user.
+2. Run setup.sql.
+3. Ensure the schema owner and tables are created successfully.
+
+### 4. Run the Application
+```powershell
+.\run.bat
+```
+Then open:
 ```text
 http://127.0.0.1:5000
 ```
 
-## Demo Logins
+## Security and Workflow Highlights
 
-```text
-admin / admin123
-officer1 / officer123
-analyst1 / analyst123
-entry1 / entry123
-```
+- Five roles are supported: SUPERADMIN, ADMIN, ANALYST, OFFICER, and VIEWER
+- Manual case handling and case editing are supported through the application UI and backend routes
+- CSV export is available through the reporting endpoint
+- The database layer includes triggers for audit logging, case spawning, and status history
 
-## Main Modules
+## Notes
 
-Dashboard, FIRs, Criminals, Cases, Evidence, Vehicles, Mobile Numbers, Alerts, Reports, and Administration.
-
-## Database Features
-
-The project includes primary and foreign keys, check constraints, unique constraints, indexes, views, sequences, triggers, PL/SQL procedures, PL/SQL functions, one package, audit logs, status history, automatic case creation, and smart repeated-entity alerts.
+Running setup.sql resets the demo schema and seed data. Use it as the authoritative database initialization script for this repository.

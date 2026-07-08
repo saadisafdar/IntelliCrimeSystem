@@ -18,6 +18,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "replace_this_secret")
 app.config["JSON_SORT_KEYS"] = False
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 ORACLE_DSN = os.getenv("ORACLE_DSN", "localhost:1521/XEPDB1")
 ORACLE_USER = os.getenv("ORACLE_USER", "intellicrime")
@@ -25,6 +26,44 @@ ORACLE_PASSWORD = os.getenv("ORACLE_PASSWORD", "intellicrime123")
 PAGE_SIZE = int(os.getenv("PAGE_SIZE", "10"))
 
 pool = None
+
+# ============================================================================
+# 5-ROLE RBAC MATRIX - Refactored Role-Based Access Control
+# ============================================================================
+ROLE_MODULES = {
+    "SUPERADMIN": ["dashboard", "users", "firs", "criminals", "cases", "officers", "vehicles", "mobiles", "evidence", "reports", "alerts", "admin"],
+    "ADMIN": ["dashboard", "firs", "criminals", "cases", "officers", "vehicles", "mobiles", "evidence", "reports", "alerts"],
+    "ANALYST": ["dashboard", "cases", "criminals", "vehicles", "mobiles", "reports", "alerts"],
+    "OFFICER": ["dashboard", "cases", "evidence", "alerts"],
+    "VIEWER": ["dashboard", "firs", "criminals", "cases", "evidence", "reports", "alerts"],
+}
+
+ROLE_LABELS = {
+    "SUPERADMIN": "System Master",
+    "ADMIN": "Administrator",
+    "ANALYST": "Crime Analyst",
+    "OFFICER": "Investigation Officer",
+    "VIEWER": "Read-Only Auditor",
+}
+
+
+def current_role():
+    return session.get("role_name")
+
+
+def role_modules(role=None):
+    return ROLE_MODULES.get(role or current_role(), ["dashboard"])
+
+
+def can_access(*roles):
+    return current_role() in roles
+
+
+def get_current_officer_id():
+    if current_role() != "OFFICER":
+        return None
+    officer = fetch_one("SELECT officer_id FROM officers WHERE user_id = :user_id", {"user_id": session["user_id"]})
+    return officer["officer_id"] if officer else None
 
 
 def create_pool():
@@ -46,7 +85,8 @@ def get_connection():
     conn = create_pool().acquire()
     try:
         user_id = session.get("user_id")
-        if user_id:
+        if user_id is not None:
+            # Force conversion to clean string format for Oracle CLIENT_IDENTIFIER
             conn.client_identifier = str(user_id)
         yield conn
     finally:
@@ -86,8 +126,9 @@ def execute(sql, params=None):
                 cur.execute(sql, params or {})
             conn.commit()
             return True
-        except Exception:
+        except Exception as e:
             conn.rollback()
+            logger.error(f"Database execute error: {e}")
             raise
 
 
@@ -101,15 +142,10 @@ def call_procedure(name, params=None, out_type=oracledb.NUMBER):
                 cur.callproc(name, values)
                 conn.commit()
                 return out_value.getvalue()
-        except Exception:
+        except Exception as e:
             conn.rollback()
+            logger.error(f"Procedure call error: {e}")
             raise
-
-
-def call_function(name, return_type, params=None):
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            return cur.callfunc(name, return_type, params or [])
 
 
 def json_error(message, status=400):
@@ -236,6 +272,47 @@ def login():
     return jsonify({"ok": True, "user": session_user()})
 
 
+@app.post("/api/register")
+def signup():
+    data = body()
+    
+    if "role" in data and "role_name" not in data:
+        data["role_name"] = data["role"]
+
+    required(data, "full_name", "username", "email", "password", "role_name")
+    if len(data["password"]) < 6:
+        return json_error("Password must be at least 6 characters", 400)
+    
+    # ========================================================================
+    # CRITICAL: Block SUPERADMIN and ADMIN registration from signup screen
+    # Only allow VIEWER, ANALYST, OFFICER self-registration
+    # ========================================================================
+    if data["role_name"] not in ("VIEWER", "ANALYST", "OFFICER"):
+        return json_error("Only Viewer, Analyst, or Officer roles can be registered. Contact system admin for elevated access.", 400)
+    
+    role = fetch_one("SELECT role_id FROM roles WHERE role_name = :role_name", {"role_name": data["role_name"]})
+    if not role:
+        return json_error("Selected role does not exist in Oracle", 400)
+    if fetch_one("SELECT user_id FROM users WHERE LOWER(username)=LOWER(:username)", {"username": data["username"]}):
+        return json_error("Username already exists", 409)
+    if fetch_one("SELECT user_id FROM users WHERE LOWER(email)=LOWER(:email)", {"email": data["email"]}):
+        return json_error("Email already exists", 409)
+    execute(
+        """
+        INSERT INTO users(user_id, role_id, username, password_hash, full_name, email, status, created_at)
+        VALUES(users_seq.NEXTVAL, :role_id, :username, :password_hash, :full_name, :email, 'ACTIVE', SYSTIMESTAMP)
+        """,
+        {
+            "role_id": role["role_id"],
+            "username": data["username"],
+            "password_hash": generate_password_hash(data["password"]),
+            "full_name": data["full_name"],
+            "email": data["email"],
+        },
+    )
+    return jsonify(ok=True, message="Account created. You can login now.")
+
+
 @app.post("/api/logout")
 def logout():
     session.clear()
@@ -250,6 +327,8 @@ def session_user():
         "username": session["username"],
         "full_name": session["full_name"],
         "role_name": session["role_name"],
+        "role_label": ROLE_LABELS.get(session["role_name"], session["role_name"]),
+        "modules": role_modules(session["role_name"]),
     }
 
 
@@ -295,7 +374,7 @@ def dashboard():
 
 
 @app.route("/api/firs", methods=["GET", "POST"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER")
 def firs():
     if request.method == "GET":
         sql = """
@@ -340,7 +419,7 @@ def firs():
 
 
 @app.route("/api/firs/<int:fir_id>", methods=["PUT", "DELETE"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER")
 def fir_item(fir_id):
     if request.method == "DELETE":
         execute("BEGIN intellicrime_pkg.archive_fir(:id); END;", {"id": fir_id})
@@ -356,7 +435,7 @@ def fir_item(fir_id):
 
 
 @app.route("/api/criminals", methods=["GET", "POST"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST", "OFFICER")
 def criminals():
     if request.method == "GET":
         sql = """
@@ -392,7 +471,7 @@ def criminals():
 
 
 @app.route("/api/criminals/<int:criminal_id>", methods=["PUT", "DELETE"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER")
 def criminal_item(criminal_id):
     if request.method == "DELETE":
         execute("UPDATE criminals SET criminal_status='CLEARED' WHERE criminal_id=:id", {"id": criminal_id})
@@ -407,30 +486,81 @@ def criminal_item(criminal_id):
     return jsonify(ok=True)
 
 
-@app.get("/api/cases")
-@require_login
+# ============================================================================
+# MANUAL CASE MANAGEMENT OVERHAUL - GET, POST, PUT Support
+# ============================================================================
+@app.route("/api/cases", methods=["GET", "POST", "PUT"])
+@require_role("SUPERADMIN", "ADMIN", "OFFICER", "ANALYST")
 def cases():
-    sql = """
-        SELECT c.case_id, c.case_title, c.case_status, c.priority, c.opened_date, c.closed_date,
-               f.fir_no, o.officer_name, ct.crime_type_name
-        FROM cases c
-        JOIN firs f ON f.fir_id=c.fir_id
-        JOIN crime_types ct ON ct.crime_type_id=f.crime_type_id
-        LEFT JOIN officers o ON o.officer_id=c.officer_id
-        WHERE 1=1
-    """
-    params = {}
-    if request.args.get("q"):
-        sql += " AND (LOWER(c.case_title) LIKE :q OR LOWER(f.fir_no) LIKE :q)"
-        params["q"] = like(request.args["q"])
-    if request.args.get("status"):
-        sql += " AND c.case_status = :status"
-        params["status"] = request.args["status"]
-    return jsonify(ok=True, rows=paged_query(sql, params, "case_id DESC"))
+    if request.method == "GET":
+        sql = """
+            SELECT c.case_id, c.case_title, c.case_status, c.priority, c.opened_date, c.closed_date,
+                   f.fir_no, o.officer_name, ct.crime_type_name
+            FROM cases c
+            JOIN firs f ON f.fir_id=c.fir_id
+            JOIN crime_types ct ON ct.crime_type_id=f.crime_type_id
+            LEFT JOIN officers o ON o.officer_id=c.officer_id
+            WHERE 1=1
+        """
+        params = {}
+        officer_id = get_current_officer_id()
+        if officer_id:
+            sql += " AND c.officer_id = :current_officer_id"
+            params["current_officer_id"] = officer_id
+        if request.args.get("q"):
+            sql += " AND (LOWER(c.case_title) LIKE :q OR LOWER(f.fir_no) LIKE :q)"
+            params["q"] = like(request.args["q"])
+        if request.args.get("status"):
+            sql += " AND c.case_status = :status"
+            params["status"] = request.args["status"]
+        return jsonify(ok=True, rows=paged_query(sql, params, "case_id DESC"))
+    
+    # ========================================================================
+    # POST: Manually create a new case (alternative to auto-generation from FIR)
+    # ========================================================================
+    if request.method == "POST":
+        data = body()
+        required(data, "case_title", "case_description")
+        fir_id = int_or_none(data.get("fir_id"))
+        officer_id = int_or_none(data.get("officer_id"))
+        case_status = data.get("case_status", "OPEN")
+        priority = data.get("priority", "MEDIUM")
+        
+        execute(
+            """
+            INSERT INTO cases (case_id, fir_id, officer_id, case_title, case_description, case_status, priority, opened_date)
+            VALUES (cases_seq.NEXTVAL, :fir_id, :officer_id, :case_title, :case_description, :case_status, :priority, SYSTIMESTAMP)
+            """,
+            {
+                "fir_id": fir_id,
+                "officer_id": officer_id,
+                "case_title": data["case_title"],
+                "case_description": data["case_description"],
+                "case_status": case_status,
+                "priority": priority,
+            },
+        )
+        return jsonify(ok=True, message="Case created successfully")
+    
+    # ========================================================================
+    # PUT: Update an existing case (case_id and field(s) to update required)
+    # ========================================================================
+    if request.method == "PUT":
+        data = body()
+        required(data, "case_id")
+        case_id = int(data["case_id"])
+        safe_update(
+            "cases",
+            "case_id",
+            case_id,
+            ["case_title", "case_description", "case_status", "priority", "officer_id"],
+            data,
+        )
+        return jsonify(ok=True, message="Case updated successfully")
 
 
 @app.get("/api/cases/<int:case_id>")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER", "ANALYST")
 def case_detail(case_id):
     info = fetch_one(
         """
@@ -448,6 +578,9 @@ def case_detail(case_id):
     )
     if not info:
         return json_error("Case not found", 404)
+    officer_id = get_current_officer_id()
+    if officer_id and info.get("officer_id") != officer_id:
+        return json_error("You can only open cases assigned to you", 403)
     return jsonify(
         ok=True,
         case=info,
@@ -464,7 +597,7 @@ def case_detail(case_id):
 
 
 @app.post("/api/cases/<int:case_id>/assign-officer")
-@require_login
+@require_role("SUPERADMIN", "ADMIN")
 def assign_case(case_id):
     data = body()
     required(data, "officer_id")
@@ -473,7 +606,7 @@ def assign_case(case_id):
 
 
 @app.post("/api/cases/<int:case_id>/status")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER")
 def update_case_status(case_id):
     data = body()
     required(data, "case_status")
@@ -482,7 +615,7 @@ def update_case_status(case_id):
 
 
 @app.post("/api/cases/<int:case_id>/suspects")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST", "OFFICER")
 def add_suspect(case_id):
     data = body()
     required(data, "criminal_id")
@@ -491,14 +624,14 @@ def add_suspect(case_id):
 
 
 @app.delete("/api/cases/<int:case_id>/suspects/<int:criminal_id>")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST", "OFFICER")
 def remove_suspect(case_id, criminal_id):
     execute("DELETE FROM case_suspects WHERE case_id=:case_id AND criminal_id=:criminal_id", {"case_id": case_id, "criminal_id": criminal_id})
     return jsonify(ok=True)
 
 
 @app.post("/api/cases/<int:case_id>/victims")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER", "ANALYST")
 def add_victim(case_id):
     data = body()
     required(data, "victim_name")
@@ -507,7 +640,7 @@ def add_victim(case_id):
 
 
 @app.post("/api/cases/<int:case_id>/witnesses")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER", "ANALYST")
 def add_witness(case_id):
     data = body()
     required(data, "witness_name")
@@ -516,7 +649,7 @@ def add_witness(case_id):
 
 
 @app.post("/api/cases/<int:case_id>/logs")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER", "ANALYST")
 def add_log(case_id):
     data = body()
     required(data, "progress_note")
@@ -525,14 +658,14 @@ def add_log(case_id):
 
 
 @app.delete("/api/cases/<int:case_id>")
-@require_login
+@require_role("SUPERADMIN", "ADMIN")
 def archive_case(case_id):
     execute("BEGIN intellicrime_pkg.archive_case(:id); END;", {"id": case_id})
     return jsonify(ok=True)
 
 
 @app.route("/api/evidence", methods=["GET", "POST"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER", "ANALYST")
 def evidence():
     if request.method == "GET":
         sql = "SELECT e.*, c.case_title, o.officer_name FROM evidence e JOIN cases c ON c.case_id=e.case_id LEFT JOIN officers o ON o.officer_id=e.collected_by WHERE 1=1"
@@ -555,7 +688,7 @@ def evidence():
 
 
 @app.route("/api/evidence/<int:evidence_id>", methods=["PUT", "DELETE"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "OFFICER", "ANALYST")
 def evidence_item(evidence_id):
     if request.method == "DELETE":
         execute("UPDATE evidence SET verification_status='ARCHIVED' WHERE evidence_id=:id", {"id": evidence_id})
@@ -565,7 +698,7 @@ def evidence_item(evidence_id):
 
 
 @app.route("/api/vehicles", methods=["GET", "POST"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def vehicles():
     if request.method == "GET":
         sql = """
@@ -587,14 +720,14 @@ def vehicles():
 
 
 @app.put("/api/vehicles/<int:vehicle_id>")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def update_vehicle(vehicle_id):
     safe_update("vehicles", "vehicle_id", vehicle_id, ["vehicle_number", "owner_name", "owner_cnic", "vehicle_type", "make", "model", "color"], body())
     return jsonify(ok=True)
 
 
 @app.post("/api/vehicles/<int:vehicle_id>/link")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def link_vehicle(vehicle_id):
     data = body()
     required(data, "case_id")
@@ -603,14 +736,14 @@ def link_vehicle(vehicle_id):
 
 
 @app.delete("/api/vehicles/<int:vehicle_id>/link/<int:case_id>")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def unlink_vehicle(vehicle_id, case_id):
     execute("DELETE FROM case_vehicles WHERE vehicle_id=:vehicle_id AND case_id=:case_id", {"vehicle_id": vehicle_id, "case_id": case_id})
     return jsonify(ok=True)
 
 
 @app.route("/api/mobiles", methods=["GET", "POST"])
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def mobiles():
     if request.method == "GET":
         sql = """
@@ -632,14 +765,14 @@ def mobiles():
 
 
 @app.put("/api/mobiles/<int:mobile_id>")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def update_mobile(mobile_id):
     safe_update("mobile_numbers", "mobile_id", mobile_id, ["mobile_number", "owner_name", "network", "registered_cnic"], body())
     return jsonify(ok=True)
 
 
 @app.post("/api/mobiles/<int:mobile_id>/link")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def link_mobile(mobile_id):
     data = body()
     required(data, "case_id")
@@ -648,7 +781,7 @@ def link_mobile(mobile_id):
 
 
 @app.delete("/api/mobiles/<int:mobile_id>/link/<int:case_id>")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def unlink_mobile(mobile_id, case_id):
     execute("DELETE FROM case_mobile_numbers WHERE mobile_id=:mobile_id AND case_id=:case_id", {"mobile_id": mobile_id, "case_id": case_id})
     return jsonify(ok=True)
@@ -711,29 +844,60 @@ def report_data():
 
 
 @app.get("/api/reports")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def reports():
     return jsonify(ok=True, reports=report_data())
 
 
+# ============================================================================
+# CSV REPORT GENERATION ENGINE - /api/reports/export
+# Exportable reporting system with standard CSV format download
+# ============================================================================
 @app.get("/api/reports/export")
-@require_login
+@require_role("SUPERADMIN", "ADMIN", "ANALYST")
 def export_reports():
-    reports = report_data()
+    """
+    CSV Report Export Engine
+    - Accepts optional 'type' query parameter (firs, cases, evidence, etc.)
+    - Generates standard CSV format using Python csv module
+    - Returns downloadable file response stream (text/csv)
+    """
+    report_type = request.args.get("type", "all").lower()
     output = io.StringIO()
     writer = csv.writer(output)
+    
+    reports = report_data()
+    
+    # If specific type requested, export only that report
+    if report_type != "all" and report_type in reports:
+        reports = {report_type: reports[report_type]}
+    
+    # Write all requested reports to CSV
     for name, rows in reports.items():
-        writer.writerow([name])
+        writer.writerow([name.upper().replace("_", " ")])
+        writer.writerow([])  # Blank line for readability
+        
         if rows:
+            # Write header row
             writer.writerow(rows[0].keys())
+            # Write data rows
             for row in rows:
                 writer.writerow(row.values())
-        writer.writerow([])
-    return Response(output.getvalue(), mimetype="text/csv", headers={"Content-Disposition": "attachment; filename=intellicrime_reports.csv"})
+        else:
+            writer.writerow(["No data available"])
+        
+        writer.writerow([])  # Blank line between reports
+    
+    filename = f"intellicrime_reports_{report_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @app.get("/api/admin")
-@require_role("ADMIN", "SUPERVISOR")
+@require_role("SUPERADMIN")
 def admin():
     return jsonify(
         ok=True,
@@ -744,4 +908,4 @@ def admin():
 
 
 if __name__ == "__main__":
-    app.run(debug=os.getenv("FLASK_DEBUG", "true").lower() == "true")
+    app.run(debug=True, host="127.0.0.1", port=5000)
